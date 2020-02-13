@@ -1,0 +1,10 @@
+[
+	{
+		"clipName":"SaultFwd_Short",
+		"gapCloserType":"ground",
+		"animationSpeed":1.5,
+		"travelTimeRequired":1,
+		"playerSpeedMultiplier":1.0
+	},
+
+]

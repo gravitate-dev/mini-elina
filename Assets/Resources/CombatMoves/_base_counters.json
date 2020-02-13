@@ -1,0 +1,11 @@
+[{
+        "disabled":true,
+        "moveName": "Test Throw",
+        "moveType": 3,
+        "idealDistance": 0.3,
+        "attackerAnimation": "Portal_Throw_A",
+        "victimAnimation": "Portal_Throw_A_Victim_Chopped",
+        "victimImmuneDuringAttack": true,
+        "attackerLockTimeAfterHit": 3,
+        "knockback":false
+}]
