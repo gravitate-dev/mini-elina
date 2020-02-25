@@ -2,11 +2,13 @@
 using Invector.vCharacterController.AI;
 using System.Collections.Generic;
 using UnityEngine;
+using static PlayerSpellLibrary;
 
 public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 {
     public GameObject SUCCUBUS_SEX_CLONE_PREFAB;
 
+    private PlayerSpellLibrary playerSpellLibrary;
     private FreeFlowGapCloser freeFlowGapCloser;
     private FreeFlowMovePicker freeFlowMovePicker;
     private FreeFlowTargetChooser freeFlowEnemyPicker;
@@ -17,10 +19,11 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     private Queue<FreeFlowAttackMove> actionQueue = new Queue<FreeFlowAttackMove>();
     private float timeTillNextFreeFlow;
     private List<System.Guid> disposables = new List<System.Guid>();
-    private FreeFlowTarget mostRecentTarget;
+    private GameObject mostRecentTarget;
     private void Awake()
     {
         GO_ID = gameObject.GetInstanceID();
+        playerSpellLibrary = GetComponent<PlayerSpellLibrary>();
         freeFlowAnimatorController = GetComponent<FreeFlowAnimatorController>();
         shooterMeleeInput = GetComponent<vShooterMeleeInput>();
         freeFlowMovePicker = FindObjectOfType<FreeFlowMovePicker>();
@@ -46,6 +49,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     private void Start()
     {
+        //spells = playerSpellLibrary.GetSpells();
     }
 
     private void OnDestroy()
@@ -58,17 +62,20 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     private int ACTION_ATTACK = 1;
     private int ACTION_COUNTER = 2;
     private int ACTION_EVADE = 3;
+    private int ACTION_MAGIC_SPELL = 4;
     private float ACTION_TIMEOUT_TIME = 1f; // game will listen for 0.3 seconds to do the next action otherwise it will ignore
+    private List<Spell> spells;
+    private Spell chosenSpell;
 
     void Update()
     {
 
         if (Input.GetKey(KeyCode.H))
         {
-            if (getMostRecentTarget() != null && getMostRecentTarget().gameObject != null )
+            if (mostRecentTarget != null)
             {
                 // todo when throwing you need to disable the collider
-                transform.position = getMostRecentTarget().gameObject.transform.position;
+                transform.position = mostRecentTarget.transform.position;
                 //GetComponent<Rigidbody>().isKinematic = true;
             }
             // Center them on each other
@@ -94,7 +101,28 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         {
             nextAction = ACTION_NULL;
         }
-        if (Input.GetMouseButtonDown(0))
+        bool wasSpell = false;
+        if (spells != null)
+        {
+            foreach (Spell spell in spells)
+            {
+                if (Input.GetKeyDown(spell.hotkey))
+                {
+                    if (spell.isOnCooldown())
+                    {
+                        continue;
+                    }
+                    wasSpell = true;
+                    chosenSpell = spell;
+                    break;
+                }
+            }
+        }
+        if (wasSpell)
+        {
+            nextAction = ACTION_MAGIC_SPELL;
+            ACTION_TIMEOUT_TIME = Time.time + ACTION_TIMEOUT_TIME;
+        } else if (Input.GetMouseButtonDown(0))
         {
             nextAction = ACTION_ATTACK;
             ACTION_TIMEOUT_TIME = Time.time + ACTION_TIMEOUT_TIME;
@@ -117,6 +145,10 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             {
                 Counter();
                 nextAction = 0;
+            } else if (nextAction == ACTION_MAGIC_SPELL)
+            {
+                MagicSpell(chosenSpell);
+                nextAction = 0;
             } else if (nextAction == ACTION_EVADE)
             {
                 Evade();
@@ -128,14 +160,14 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     private void Attack()
     {
         
-        FreeFlowTarget target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_ATTACK);
+        GameObject target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_ATTACK);
         if (target == null)
         {
             return;
         }
         mostRecentTarget = target;
 
-        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(target);
+        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(transform,target);
         if (attackMove == null)
         {
             return;
@@ -152,14 +184,14 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     private void Counter()
     {
-        FreeFlowTarget target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_COUNTER);
+        GameObject target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_COUNTER);
         if (target == null)
         {
             return;
         }
         mostRecentTarget = target;
 
-        EnemyTicketHolder ticketHolder =  target.gameObject.GetComponent<EnemyTicketHolder>();
+        EnemyMeleeActionManager ticketHolder =  target.gameObject.GetComponent<EnemyMeleeActionManager>();
         if (ticketHolder == null)
         {
             return;
@@ -167,7 +199,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         shooterMeleeInput.SetLockAllInput(true);
         ticketHolder.CancelAttack();
 
-        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(target);
+        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(transform,target);
         if (attackMove == null)
         {
             return;
@@ -181,7 +213,30 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         freeFlowGapCloser.MoveToTargetForAttack(attackMove, this);
     }
 
-    
+    private void MagicSpell(Spell spell)
+    {
+        if (spell.SPELL_NUMBER == SPELL_SUMMON_SEX_SUCCUBUS)
+        {
+            DoSexSuccubusSpell(spell);
+        }
+    }
+    private void DoSexSuccubusSpell(Spell spell) {
+        GameObject target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_SEX);
+        if (target == null)
+        {
+            return;
+        }
+        playerSpellLibrary.OnCastSpell(spell);
+
+        GameObject newSuccubus = Instantiate(SUCCUBUS_SEX_CLONE_PREFAB);
+        Vector3 pos = transform.position + transform.forward; // spawn demon in front
+        newSuccubus.transform.position = pos;
+        pos.y = transform.position.y + 0.5f;
+        newSuccubus.transform.rotation = transform.rotation;
+        /*SexShadowClone sexShadowClone = newSuccubus.GetComponent<SexShadowClone>();
+        sexShadowClone.SetTarget(target);
+        sexShadowClone.MoveThenSex();*/
+    }
 
     private void Evade()
     {
@@ -200,22 +255,6 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         return (currentAttack.victimAnimationDelay + currentAttack.attackerLockTimeAfterHit) / currentAttack.attackerAnimationSpeed;
     }
 
-    private void PlaceIdeally(FreeFlowTarget target, FreeFlowAttackMove attack)
-    {
-        /*Vector3 startPos = target.gameObject.transform.position;
-        Vector3 offset = transform.position - startPos;
-        offset = offset.normalized * attack.idealDistance;
-
-        // SPIDERMAN TODO MAYBE REMOVE IF HIGH HEEL?
-        var newPos = offset + startPos;
-        newPos.y = transform.position.y;
-        transform.position = newPos;*/
-    }
-
-    private FreeFlowTarget getMostRecentTarget()
-    {
-        return mostRecentTarget;
-    }
 
     public void onReachedDestination()
     {
@@ -266,12 +305,5 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         if (move.victim.gameObject == null) {
             return;
         }
-        vControlAI controlAI = move.victim.gameObject.GetComponent<vControlAI>();
-        if (controlAI==null)
-        {
-            return;
-        }
-        Debug.Log("WAKE UP 2");
-        controlAI.EnableAIController();
     }
 }

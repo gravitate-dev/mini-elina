@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
 using System.ComponentModel;
 using UnityEngine;
 
@@ -47,7 +46,7 @@ public class FreeFlowAttackMove
     public float victimAnimationDelay;
     public string victimAnimation;
     [DefaultValue(1)]
-    public double victimStunTime;
+    public float victimStunTime;
 
     /// <summary>
     /// While the whole attack is playing plus the stun time, target is ignored for attacks when TRUE
@@ -58,7 +57,7 @@ public class FreeFlowAttackMove
     [JsonIgnore]
     public GameObject attacker;
     [JsonIgnore]
-    public FreeFlowTarget victim;
+    public GameObject victim;
 
     [JsonIgnore]
     public string note; // debug note for dev work

@@ -31,7 +31,6 @@ public class FreeFlowGapCloser : MonoBehaviour
     private float journeyLength;
     private float stopDistance;
     private GameObject target;
-    private vControlAI ai;
     private bool playedAttackAnimationYet;
     private AnimationClipHandler animationClipHandler;
 
@@ -125,19 +124,6 @@ public class FreeFlowGapCloser : MonoBehaviour
             float distanceLeft = Vector3.Distance(transform.position, target.transform.position);
             transform.LookAt(target.transform);
             
-            if (distanceLeft < DISABLE_AI_AT_CLOSEST_DISTANCE && ai!=null && ai.isActiveAndEnabled)
-            {
-                try
-                {
-                    ai.DisableAIController();
-                    ai._rigidbody.isKinematic = false;
-#pragma warning disable CS0168 // Variable is declared but never used
-                } catch (Exception e)
-#pragma warning restore CS0168 // Variable is declared but never used
-                {
-                    //shity invector
-                }
-            }
             if (chosenGapCloserStyle!=null && !playedAttackAnimationYet)
             {
                 if (travelTimeLeft <= chosenGapCloserStyle.travelTimeRequired)
@@ -151,6 +137,7 @@ public class FreeFlowGapCloser : MonoBehaviour
                     usingGapCloser = true;
                 }
             }
+            //Debug.Log("DISTANCE LEFT" + distanceLeft);
             if (distanceLeft < stopDistance)
             {
                 freeFlowIsLeaping = false;
@@ -174,12 +161,10 @@ public class FreeFlowGapCloser : MonoBehaviour
             return;
         }
         this.freeFlowGapListener = freeFlowGapListener;
-        FreeFlowTarget ffTarget = attack.victim;
         stopDistance = attack.idealDistance;
         startPosition = transform.position;
 
-        target = ffTarget.gameObject;
-        ai = target.GetComponent<vControlAI>();
+        target = attack.victim;
         journeyLength = Vector3.Distance(startPosition, target.transform.position);
 
         // when we are within striking range already, no need to travel
@@ -222,7 +207,7 @@ public class FreeFlowGapCloser : MonoBehaviour
     /// Moves to the target then emits an event when the distance was reached
     /// </summary>
     /// <param name="target"></param>
-    public void MoveToTargetForSex(FreeFlowTarget ffTarget, FreeFlowGapListener freeFlowGapListener)
+    public void MoveToTargetForSex(GameObject ffTarget, FreeFlowGapListener freeFlowGapListener)
     {
         this.freeFlowGapListener = freeFlowGapListener;
         if (IsLeaping() || ffTarget == null)
@@ -232,7 +217,7 @@ public class FreeFlowGapCloser : MonoBehaviour
         stopDistance = 1.0f;
         startPosition = transform.position;
 
-        target = ffTarget.gameObject;
+        target = ffTarget;
         journeyLength = Vector3.Distance(startPosition, target.transform.position);
 
         // when we are within striking range already, no need to travel

@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 public class FreeFlowMovePicker : MonoBehaviour
@@ -15,6 +17,7 @@ public class FreeFlowMovePicker : MonoBehaviour
     public bool useDebugMove;
     public FreeFlowAttackMove debugMove;
 
+    [Button(ButtonSizes.Large), GUIColor(0, 1, 0)]
     private void GenerateJSON()
     {
         string finisherClause = "";
@@ -92,7 +95,7 @@ public class FreeFlowMovePicker : MonoBehaviour
         }
     }
 
-    public FreeFlowAttackMove PickMoveRandomly(FreeFlowTarget target)
+    public FreeFlowAttackMove PickMoveRandomly(Transform player, GameObject target)
     {
         if (target == null)
         {
@@ -102,12 +105,16 @@ public class FreeFlowMovePicker : MonoBehaviour
         {
             return debugMove;
         }
+
+        Vector3 planarTargetPos = Vector3.ProjectOnPlane(target.transform.position, Vector3.up);
+        float targetDistance = Vector3.Distance(player.position, planarTargetPos);
+
         List<FreeFlowAttackMove> possibilities = new List<FreeFlowAttackMove>();
         for (int i = 0; i < moveList.Count; i++)
         {
             FreeFlowAttackMove move = moveList[i];
             float minDistance = move.idealDistance - 0.5f;
-            if (minDistance > target.distance)
+            if (minDistance > targetDistance)
             {
                 // we are too close to do the attack at minimum we need this little space
                 // so we exit
@@ -117,7 +124,7 @@ public class FreeFlowMovePicker : MonoBehaviour
         }
         if (possibilities.Count == 0)
         {
-            Debug.Log("Too close to attack: " + target.distance);
+            Debug.Log("Too close to attack: " + targetDistance);
             return null;
         }
         int randIdx = Random.Range(0, possibilities.Count);

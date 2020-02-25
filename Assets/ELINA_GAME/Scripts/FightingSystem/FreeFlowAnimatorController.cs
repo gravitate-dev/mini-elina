@@ -12,12 +12,12 @@ public class FreeFlowAnimatorController : MonoBehaviour
     private HybridAnimancerComponent animancer;
     private int GO_ID;
     private AnimationClipHandler animationClipHandler;
-    private vControlAI ai;
+    private SoundSystem soundSystem;
     void Awake()
     {
         GO_ID = gameObject.GetInstanceID();
         animancer = GetComponent<HybridAnimancerComponent>();
-        ai = GetComponent<vControlAI>();
+        soundSystem = FindObjectOfType<SoundSystem>();
         animationClipHandler = AnimationClipHandler.INSTANCE;
     }
 
@@ -48,20 +48,20 @@ public class FreeFlowAnimatorController : MonoBehaviour
 
     private void PlayAnimation(FreeFlowAttackMove move)
     {
-        animancer.SetFloat("FreeFlowAnimSpeed", 1.0f);
+        
         if (move.victim.gameObject != null && move.victim.gameObject.GetInstanceID() == GO_ID)
         {
             
             if (move.moveType == 1 || move.moveType == 2)
             {
-                /*// these are punch and kicks
-                soundSystem.PlaySound("melee_impact", transform);
+                // these are punch and kicks
+                //soundSystem.PlaySound("melee_impact", transform);
 
                 SpecialFxRequestBuilder.newBuilder("AttackSparkle")
                 .setOwner(transform, true)
                 .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.HALF_PLAYER_HEIGHT, 0))
                 .setOffsetRotation(new Vector3(-90, 0, 0))
-                .build().Play();*/
+                .build().Play();
             }
             // i am victim
             string animationToPlay = move.DEBUG_VICTIM != null ? move.DEBUG_VICTIM.name : move.victimAnimation;
@@ -75,7 +75,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
                 // its a throw
                 AnimancerState state = animancer.Play(clip, 0.1f, FadeMode.FixedDuration);
                 state.Time = 0;
-                state.Events.OnEnd = BoostThrowThenNormal;
+                state.Events.OnEnd = ReturnToNormal;
             }
             else
             {
@@ -119,32 +119,9 @@ public class FreeFlowAnimatorController : MonoBehaviour
         }
     }
 
-    private void BoostThrowThenNormal()
-    {
-        if (GetComponent<vRagdoll>() != null)
-        {
-            //vRagdoll ragdoll = GetComponent<vRagdoll>();
-            //ragdoll.ActivateRagdoll();
-        }
-        IJobRepeat job = SuperInvoke.RunRepeat(0,0.1f,10, () =>
-        {
-            Vector3 force = -transform.forward;
-            force = force * 10;
-            GetComponent<Rigidbody>().AddForce(force, ForceMode.Impulse);
-        });
-        job.OnComplete(() =>
-        {
-            ReturnToNormal();
-        });
-        
-    }
     private void ReturnToNormal()
     {
-        if (ai != null)
-        {
-            ai.EnableAIController();
-        }
-        animancer.Play(Animator.StringToHash("Free Locomotion"),0,0);
+        animancer.PlayController();
     }
 
     
