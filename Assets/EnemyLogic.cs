@@ -11,7 +11,7 @@ public class EnemyLogic : MonoBehaviour
     Vector3 TargetDestination;
     [HideInInspector] public Vector3 MovementDirection;
     CharacterController cc; 
-    RagdollEnabler rd; // THIS IS NEW
+    RagdollEnabler rd;
     IAstarAI ai;
     [Range(0, 1)] public int EnemyType;
 
