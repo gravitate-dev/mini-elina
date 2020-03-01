@@ -76,13 +76,13 @@ public class EnemyQueueHandler : MonoBehaviour
         }
 
         // Repopulate the queue if needed
-        if (Queue.Count < QueueSize && Queue.Count < Enemies.Count)
+        List<GameObject> SortedList = Enemies.OrderBy(o => o.GetComponent<EnemyLogic>().DistanceFromPlayer).ToList();
+        foreach (GameObject enemy in SortedList)
         {
-            List<GameObject> SortedList = Enemies.OrderBy(o => o.GetComponent<EnemyLogic>().DistanceFromPlayer).ToList();
-            foreach (GameObject enemy in SortedList)
+            if (Queue.Count < QueueSize && Queue.Count < Enemies.Count)
             {
-                if (enemy.GetComponent<EnemyLogic>().Aggro 
-                    && !enemy.GetComponent<EnemyLogic>().Attacking 
+                if (enemy.GetComponent<EnemyLogic>().Aggro
+                    && !enemy.GetComponent<EnemyLogic>().Attacking
                     && enemy.GetComponent<EnemyLogic>().CurrentBehavior != Behavior.MovingToAttack
                     && enemy.GetComponent<EnemyLogic>().CurrentBehavior != Behavior.Disabled
                     && enemy.GetComponent<EnemyLogic>().AttackCooldownTimer <= 0
