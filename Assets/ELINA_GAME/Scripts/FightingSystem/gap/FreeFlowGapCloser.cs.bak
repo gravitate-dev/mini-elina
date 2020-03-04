@@ -137,6 +137,7 @@ public class FreeFlowGapCloser : MonoBehaviour
                     usingGapCloser = true;
                 }
             }
+            //Debug.Log("DISTANCE LEFT" + distanceLeft);
             if (distanceLeft < stopDistance)
             {
                 freeFlowIsLeaping = false;

@@ -29,6 +29,7 @@ public class EnemyMeleeActionManager : MonoBehaviour
     [HideInInspector]
     public bool defeated;
 
+    public bool hasTicket;
     public float warningTimeMelee = 1.0f;
     public float warningTimeRange = 5.0f;
 
@@ -36,16 +37,14 @@ public class EnemyMeleeActionManager : MonoBehaviour
     private GameObject currentAlertEffect;
     private FreeFlowTargetable freeFlowTargetable;
     private List<Tuple<string,float, float>> actionProbabilities = new List<Tuple<string,float,float>>();
-    private AiHentai aiHentai;
-    private FreeFlowAnimatorController freeFlowAnimatorController;
+    /*private AiHentai aiHentai;*/
 
     // player
-    private FreeFlowCharacterController playerFreeFlowCharacterController;
+    private PlayerTargetable playerTargetable;
     void Awake()
     {
-        freeFlowAnimatorController = GetComponent<FreeFlowAnimatorController>();
-        playerFreeFlowCharacterController = IAmElina.ELINA.gameObject.GetComponent<FreeFlowCharacterController>();
-        aiHentai = GetComponent<AiHentai>();
+        /*playerTargetable = IAmElina.ELINA.gameObject.GetComponent<PlayerTargetable>();
+        aiHentai = GetComponent<AiHentai>();*/
         freeFlowTargetable = GetComponent<FreeFlowTargetable>();
         GenerateBuckets();
     }
@@ -108,9 +107,10 @@ public class EnemyMeleeActionManager : MonoBehaviour
     /// Enemy Grabs a ticket and returns the action they will take
     /// </summary>
     /// <returns>Delay until action executed</returns>
-    public float StartRandomAttack()
+    public float StartRandomAction()
     {
-        wishAction = ACTION_MELEE;// = PickActionRandomly();
+        wishAction = ACTION_SEX;// = PickActionRandomly();
+        SetTargetableState(wishAction);
         currentAlertEffect = DisplayFXWarning(wishAction);
         float actionDelay = GetActionDelay(wishAction);
         Invoke("DoTicketAction", actionDelay);
@@ -122,40 +122,16 @@ public class EnemyMeleeActionManager : MonoBehaviour
         //For now return
         if (wishAction == ACTION_SEX)
         {
-            aiHentai.FuckTarget(IAmElina.ELINA.gameObject.GetInstanceID());
-        } else if (wishAction == ACTION_MELEE)
-        {
-            doMelee();
+            //aiHentai.FuckTarget(IAmElina.ELINA.gameObject.GetInstanceID());
         }
         wishAction = null;
-    }
-
-    private void doMelee()
-    {
-        FreeFlowAttackMove attackMove = FreeFlowMovePicker.INSTANCE.PickMoveRandomly(transform, IAmElina.ELINA);
-        if (attackMove == null)
-        {
-            return;
-        }
-        attackMove.victimGO_ID = IAmElina.ELINA.GetInstanceID();
-        attackMove.attacker = gameObject;
-        attackMove.victim = IAmElina.ELINA;
-
-        FreeFlowAnimatorController victimFreeFlowAnimatorController = attackMove.victim.GetComponent<FreeFlowAnimatorController>();
-        int result = FreeFlowTargetable.HIT_RESULT_NORMAL;
-        attackMove.victimReactionId = result;
-
-        // victim
-        victimFreeFlowAnimatorController.startFreeFlowAttack(attackMove);
-        playerFreeFlowCharacterController.VictimHitRoutines(attackMove);
-        
-        // attacker
-        freeFlowAnimatorController.startFreeFlowAttack(attackMove);
+        freeFlowTargetable.targetableCounter = false;
     }
 
     public void CancelAttack()
     {
         wishAction = null;
+        freeFlowTargetable.targetableCounter = false;
         CancelInvoke();
         if (currentAlertEffect != null)
         {
@@ -166,6 +142,23 @@ public class EnemyMeleeActionManager : MonoBehaviour
     public bool isFree()
     {
         return wishAction == null || wishAction.Length==0;
+    }
+    private void SetTargetableState(string type)
+    {
+        switch (type)
+        {
+            case ACTION_MELEE:
+                freeFlowTargetable.targetableCounter = true;
+                break;
+            case ACTION_RANGE:
+                break;
+            case ACTION_SEX:
+                freeFlowTargetable.targetableCounter = true;
+                break;
+            case ACTION_BONDAGE:
+                freeFlowTargetable.targetableCounter = true;
+                break;
+        }
     }
 
     private float GetActionDelay(string type)
@@ -214,10 +207,5 @@ public class EnemyMeleeActionManager : MonoBehaviour
                 .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.HALF_PLAYER_HEIGHT, 0))
                 .setOffsetRotation(new Vector3(-90, 0, 0))
                 .build().Play();
-    }
-
-    public bool isWishingMeleeAttack()
-    {
-        return wishAction == ACTION_MELEE;
     }
 }

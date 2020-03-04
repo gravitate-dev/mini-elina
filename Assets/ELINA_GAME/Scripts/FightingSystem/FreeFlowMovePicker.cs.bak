@@ -13,7 +13,7 @@ public class FreeFlowMovePicker : MonoBehaviour
     private List<FreeFlowAttackMove> moveList = new List<FreeFlowAttackMove>();
     private AnimationClipHandler animationClipHandler;
 
-    public static FreeFlowMovePicker INSTANCE;
+
     public bool useDebugMove;
     public FreeFlowAttackMove debugMove;
 
@@ -49,7 +49,6 @@ public class FreeFlowMovePicker : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
-        INSTANCE = this;
         animationClipHandler = AnimationClipHandler.INSTANCE;
         JsonSerializerSettings settings = new JsonSerializerSettings();
         settings.DefaultValueHandling = DefaultValueHandling.Populate;

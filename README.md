@@ -17,7 +17,11 @@
 
 ## Game controls
 1. Mouse click attack
-2. #1 key hit reaction dynamic
+2. Right mouse click 
 3. #2/#3 key knockback with ragdoll!
 
 ![](https://github.com/robert-irribarren/mini-elina/blob/master/intro.gif?raw=true)
+
+
+Also the current fighting state
+![](https://github.com/robert-irribarren/mini-elina/blob/master/fightingPreview.gif?raw=true)

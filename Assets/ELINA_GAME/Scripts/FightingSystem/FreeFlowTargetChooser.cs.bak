@@ -81,9 +81,8 @@ public class FreeFlowTargetChooser : MonoBehaviour
         List<Transform> targets = new List<Transform>();
         foreach (Collider collider in Physics.OverlapSphere(transform.position, MAX_TARGET_DISTANCE))
         {
-            EnemyMeleeActionManager enemyMeleeActionManager = collider.gameObject.GetComponent<EnemyMeleeActionManager>();
             FreeFlowTargetable freeFlowTargetable = collider.gameObject.GetComponent<FreeFlowTargetable>();
-            if (enemyMeleeActionManager == null || collider.gameObject == this.gameObject)
+            if (freeFlowTargetable == null || collider.gameObject == this.gameObject)
             {
                 continue;
             }
@@ -91,7 +90,7 @@ public class FreeFlowTargetChooser : MonoBehaviour
 
 
             if (reason == TARGET_REASON_ATTACK && !freeFlowTargetable.isTargetableForAttack()
-                || reason == TARGET_REASON_COUNTER && !enemyMeleeActionManager.isWishingMeleeAttack()
+                || reason == TARGET_REASON_COUNTER && !freeFlowTargetable.isTargetableForCounter()
                 || reason == TARGET_REASON_SEX && !freeFlowTargetable.isTargetSexable())
             {
                 continue;

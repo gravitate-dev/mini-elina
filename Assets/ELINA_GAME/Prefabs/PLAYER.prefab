@@ -2692,9 +2692,9 @@ GameObject:
   - component: {fileID: 3603049262513303821}
   - component: {fileID: 3603049262513303820}
   - component: {fileID: 3603049262513303819}
-  - component: {fileID: 3603049262513303818}
   - component: {fileID: 8359609888800952095}
   - component: {fileID: 9102935312719914850}
+  - component: {fileID: 5795516517360471907}
   m_Layer: 8
   m_Name: PLAYER
   m_TagString: Player
@@ -3424,6 +3424,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SUCCUBUS_SEX_CLONE_PREFAB: {fileID: 0}
+  orgasmTimesForDefeat: 3
+  canBeAttacked: 0
+  canBeSexed: 0
+  canBeCarried: 0
 --- !u!114 &3603049262513303820
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3447,18 +3451,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0fe06897ca9f62a4fa962bf734f697cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &3603049262513303818
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3603049262295657581}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eab92235da0040d478ea16daf3aa61a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &8359609888800952095
@@ -3510,6 +3502,18 @@ MonoBehaviour:
   doBoost: 0
   glidingClip: {fileID: 7400000, guid: d38f34bfe96221e428e6fa1a3c4674f5, type: 2}
   droppingClip: {fileID: 0}
+--- !u!114 &5795516517360471907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3603049262295657581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e67a61a9a6b137c41b8f5eaa27760177, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &3603049262312338832
 GameObject:
   m_ObjectHideFlags: 0

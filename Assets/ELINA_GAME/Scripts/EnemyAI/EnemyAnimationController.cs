@@ -17,6 +17,10 @@ public class EnemyAnimationController : MonoBehaviour
     void Start()
     {
         animator = GetComponent<Animator>();
+        if (animator == null && transform.childCount > 0)
+        {
+            animator = transform.GetChild(0).GetComponent<Animator>();
+        }        
         cc = GetComponent<CharacterController>();
         enemy = GetComponent<EnemyLogic>();
     }

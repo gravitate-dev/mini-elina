@@ -1,12 +1,17 @@
-﻿using System.Collections;
+﻿using Animancer;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class RagdollEnabler : MonoBehaviour
 {
-    Animator anim;
+    HybridAnimancerComponent hybridAnimancerComponent;
     CharacterController cc;
     List<LimbInformation> Limbs;
+
+    public bool targetable;
+    private float fixedHeight;
+    private float floorBodyHeightGap = 0.025f;
 
     public float DurationToBlend;
     public float TimeUntilStandingUp;
@@ -17,31 +22,34 @@ public class RagdollEnabler : MonoBehaviour
 
     float blendStartTime = -100;
     float timeSpendOnGround;
-    string animationToBlendInto = "";
-    bool characterControllerDisabled = false;
+    public bool characterControllerDisabled = false;
 
     Vector3 hipPosition;
     Vector3 headPosition;
     Vector3 feetPosition;
     Vector3 originalRoot;
 
+    private void Awake()
+    {
+        targetable = true;
+    }
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            Vector3 dir = transform.position - GameObject.FindWithTag("Player").transform.position;
-            AddForceToLimb(anim.GetBoneTransform(HumanBodyBones.Head), dir, 25, 0.1f);
+            Vector3 dir = transform.position - IAmElina.ELINA.transform.position;
+            AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Head), dir, 25, 0.1f);
         }
         if (Input.GetKeyDown(KeyCode.Alpha2))
         {
-            AddForceToLimb(anim.GetBoneTransform(HumanBodyBones.Chest), -transform.forward, 30, 0);
-            AddForceToLimb(anim.GetBoneTransform(HumanBodyBones.Hips), -transform.forward, 30, 0);
+            AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Chest), -transform.forward, 30, 0);
+            AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips), -transform.forward, 30, 0);
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            Vector3 dir = transform.position - GameObject.FindWithTag("Player").transform.position;
-            AddForceToLimb(anim.GetBoneTransform(HumanBodyBones.Chest), dir + Vector3.up, 50, 0);
-            AddForceToLimb(anim.GetBoneTransform(HumanBodyBones.Hips), dir + Vector3.up, 40, 0);
+            Vector3 dir = transform.position - IAmElina.ELINA.transform.position;
+            AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Chest), dir + Vector3.up, 50, 0);
+            AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips), dir + Vector3.up, 40, 0);
         }
         if (Input.GetKeyDown(KeyCode.Alpha4))
         {
@@ -51,10 +59,20 @@ public class RagdollEnabler : MonoBehaviour
         GetUpFromRagdoll();
     }
 
+    public void DebugShowOff()
+    {
+        Vector3 dir = transform.position - IAmElina.ELINA.transform.position;
+        AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Chest), dir + Vector3.up, 50, 0);
+        AddForceToLimb(hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips), dir + Vector3.up, 40, 0);
+    }
     void Start()
     {
         // Get the animator and the character controller
-        anim = GetComponent<Animator>();
+        hybridAnimancerComponent = GetComponent<HybridAnimancerComponent>();
+        if (hybridAnimancerComponent == null)
+        {
+            hybridAnimancerComponent = GetComponentInChildren<HybridAnimancerComponent>();
+        }
         cc = GetComponent<CharacterController>();
 
         // Store Limb information for the character
@@ -87,7 +105,7 @@ public class RagdollEnabler : MonoBehaviour
                 if (limb.Transform != transform)
                 {
                     // Only adjust the position of the Hip bone, and do not adjust its rotation
-                    if (limb.Transform == anim.GetBoneTransform(HumanBodyBones.Hips))
+                    if (limb.Transform == hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips))
                     {
                         limb.Transform.position = Vector3.Lerp(limb.Transform.position, limb.OriginalPosition, blendAmount);
                         continue;
@@ -100,13 +118,16 @@ public class RagdollEnabler : MonoBehaviour
 
             // Blending is complete and we can renable the animator
             if (blendAmount <= 0)
+            {
                 state = CurrentState.Enabled;
+        }
         }
         else if (state == CurrentState.Enabled)
         {
-            if (anim.GetCurrentAnimatorStateInfo(0).IsName("Idle") && anim.GetBool("Ragdolled"))
+            if (hybridAnimancerComponent.GetCurrentAnimatorStateInfo(0).IsName("Idle") && hybridAnimancerComponent.GetBool("Ragdolled"))
             {
-                anim.SetBool("Ragdolled", false);
+                targetable = true;
+                hybridAnimancerComponent.SetBool("Ragdolled", false);
                 animRagdollFlag = false;
                 timeSpendOnGround = 0;
             }
@@ -147,18 +168,28 @@ public class RagdollEnabler : MonoBehaviour
             limb.OriginalPosition = limb.Transform.position;
         }
 
-        feetPosition = 0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftToes).position + anim.GetBoneTransform(HumanBodyBones.RightToes).position);
-        headPosition = anim.GetBoneTransform(HumanBodyBones.Head).position;
-        hipPosition = anim.GetBoneTransform(HumanBodyBones.Hips).position;
-        anim.SetBool("Ragdolled", true);
+        feetPosition = 0.5f * (hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.LeftToes).position + hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.RightToes).position);
+        headPosition = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Head).position;
+        hipPosition = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).position;
+        hybridAnimancerComponent.SetBool("Ragdolled", true);
         animRagdollFlag = true;
-        anim.Play(AnimationToBlendInto);
+        if (AnimationToBlendInto != null)
+        {
+            AnimancerState state = hybridAnimancerComponent.Play(AnimationToBlendInto);
+            fixedHeight = transform.position.y + floorBodyHeightGap;
+        }
+        else
+        {
+            targetable = true;
+            hybridAnimancerComponent.PlayController();
+        }
     }
 
     /// <summary>
     /// Attempts to get back up after being ragdolled if the body is on the ground
     /// </summary>
-    public void GetUpFromRagdoll() {
+    public void GetUpFromRagdoll()
+    {
         if (state == CurrentState.Enabled)
         {
             timeSpendOnGround = 0;
@@ -166,8 +197,8 @@ public class RagdollEnabler : MonoBehaviour
         }
 
         // Get the heights of the hip and head bones so we can compare the distance between them
-        float hipHeight = anim.GetBoneTransform(HumanBodyBones.Hips).position.y;
-        float headHeight = anim.GetBoneTransform(HumanBodyBones.Head).position.y;
+        float hipHeight = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).position.y;
+        float headHeight = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Head).position.y;
         
         // If the difference between the heights of the head and hips is less than 20% of the character controllers height
         // and the body has been on the ground longer than the required duration, stand the character up
@@ -176,28 +207,28 @@ public class RagdollEnabler : MonoBehaviour
             timeSpendOnGround = 0;
             if (ModelIsJanky)
             {
-                if (-anim.GetBoneTransform(HumanBodyBones.Hips).forward.y > 0)
+                if (-hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).forward.y > 0)
                     BlendFromRagdoll("Get Up From Back");
                 else
                     BlendFromRagdoll("Get Up From Chest");
             }
             else
             {
-                if (anim.GetBoneTransform(HumanBodyBones.Hips).forward.y > 0)
+                if (hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).forward.y > 0)
                     BlendFromRagdoll("Get Up From Back");
                 else
                     BlendFromRagdoll("Get Up From Chest");
             }
         }
-        else if(state == CurrentState.Disabled)
+        else if (state == CurrentState.Disabled)
         {
             // If the body is barely moving, meaning its probably laying somewhere. Increase the timer til standing up
-            if (anim.GetBoneTransform(HumanBodyBones.Hips).GetComponent<Rigidbody>().velocity.magnitude < 0.5f)
+            if (hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).GetComponent<Rigidbody>().velocity.magnitude < 0.5f)
                 timeSpendOnGround += Time.deltaTime;
 
-            if(timeSpendOnGround > TimeUntilStandingUp * 2)
+            if (timeSpendOnGround > TimeUntilStandingUp * 2)
             {
-                BlendFromRagdoll("");
+                BlendFromRagdoll(null);
                 timeSpendOnGround = 0;
             }
         }
@@ -231,19 +262,17 @@ public class RagdollEnabler : MonoBehaviour
             Duration -= Time.deltaTime;
             yield return null;
         }
-        BlendFromRagdoll("");
+        BlendFromRagdoll(null);
     }
     #endregion
 
     #region == Internal Enabling / Disabling Ragdoll == 
     void EnableRagdoll()
     {
-        anim.enabled = false;
+        hybridAnimancerComponent.enabled = false;
         Collider[] colliders = transform.GetComponentsInChildren<Collider>();
-        characterControllerDisabled = true;
+        targetable = false;
         timeSpendOnGround = 0;
-
-        cc.detectCollisions = false;
 
         foreach (Collider col in colliders)
         {
@@ -254,16 +283,14 @@ public class RagdollEnabler : MonoBehaviour
             }
         }
     }
-
     void DisableRagdoll()
     {
-        anim.enabled = true;
+        hybridAnimancerComponent.enabled = true;
         Collider[] colliders = transform.GetComponentsInChildren<Collider>();
-        characterControllerDisabled = false;
 
         foreach (Collider col in colliders)
         {
-            if (col.gameObject.layer == LayerMask.NameToLayer("Hitbox"))
+            if (col.gameObject.layer == ToLayerNumber(LayerForLimbs))
             {
                 col.isTrigger = true;
                 col.attachedRigidbody.isKinematic = true;
@@ -279,7 +306,7 @@ public class RagdollEnabler : MonoBehaviour
     void UpdateRootPosition()
     {
         // Find where we need to move the root of the character to
-        Vector3 animatedToRagdolled = hipPosition - anim.GetBoneTransform(HumanBodyBones.Hips).position;
+        Vector3 animatedToRagdolled = hipPosition - hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).position;
         Vector3 calculatedRootPosition = transform.position + animatedToRagdolled;
 
         // Find the Height of the ground
@@ -290,10 +317,24 @@ public class RagdollEnabler : MonoBehaviour
             if (!hit.transform.IsChildOf(transform))
                 calculatedRootPosition.y = Mathf.Max(calculatedRootPosition.y, hit.point.y);
         }
-
+        float diff = Mathf.Abs(fixedHeight - calculatedRootPosition.y);
+        if (diff > 5.0f)
+        {
+            Debug.Log("Check yo self!" + diff);
+        }
         // Only move the root if the distance is significant, this way we dont produce needless jitter
         if (Vector3.Distance(transform.position, calculatedRootPosition) > cc.height * 0.2f)
+        {
+            // method 1 it will be neat allows falling gravity
+            //calculatedRootPosition.y = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).position.y;
+
+            // for when im on the floor this is accurate
+            calculatedRootPosition.y = fixedHeight;
+            cc.enabled = false;
+            cc.transform.position = calculatedRootPosition;
+            cc.enabled = true;
             transform.position = calculatedRootPosition;
+    }
     }
 
     /// <summary>
@@ -302,13 +343,13 @@ public class RagdollEnabler : MonoBehaviour
     void UpdateRootRotation()
     {
         // Find the heights of the hips and head which will be used to calculate how much the body is leaning / laying
-        float hipHeight = anim.GetBoneTransform(HumanBodyBones.Hips).position.y;
-        float headHeight = anim.GetBoneTransform(HumanBodyBones.Head).position.y;
+        float hipHeight = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).position.y;
+        float headHeight = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Head).position.y;
 
         Vector3 directionBeforeBlending = headPosition - feetPosition;
         directionBeforeBlending.y = 0;
-        Vector3 betweenFeetPosition = 0.5f * (anim.GetBoneTransform(HumanBodyBones.LeftFoot).position + anim.GetBoneTransform(HumanBodyBones.RightFoot).position);
-        Vector3 currentDirection = anim.GetBoneTransform(HumanBodyBones.Head).position - betweenFeetPosition;
+        Vector3 betweenFeetPosition = 0.5f * (hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.LeftFoot).position + hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.RightFoot).position);
+        Vector3 currentDirection = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Head).position - betweenFeetPosition;
         currentDirection.y = 0;
 
         if (Mathf.Abs(hipHeight - headHeight) <= cc.height * 0.2f || Vector3.Distance(transform.position, originalRoot) > cc.height * 0.5)

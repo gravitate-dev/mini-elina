@@ -6,9 +6,11 @@ using UnityEngine;
 
 public class EnemyLogic : MonoBehaviour
 {
+    private GameObject DEBUG_ATTACK_SYMBOL;
+
     GameObject TargetPlayer;
     Vector3 SpawnPoint;
-    Vector3 TargetDestination;
+    public Vector3 TargetDestination;
     [HideInInspector] public Vector3 MovementDirection;
     CharacterController cc; 
     RagdollEnabler rd;
@@ -16,7 +18,8 @@ public class EnemyLogic : MonoBehaviour
     [Range(0, 1)] public int EnemyType;
 
     [Header("Speeds")]
-    float CurrentSpeed;
+    //DONT TOUCH currentSpeed;
+    public float CurrentSpeed;
     float Acceleration;
     public float MaxChasingSpeed;
     public float MaxRepositioningSpeed;
@@ -25,7 +28,11 @@ public class EnemyLogic : MonoBehaviour
     [Header("Behavior")]
     public Behavior CurrentBehavior;
     float QueuedDistance = 0;
+    float BehaviorChangeTimerForSex = 0;
+    float BehaviorChangeTimerForStun = 0;
     float BehaviorChangeTimer = 0;
+    // new 
+    float CurrentAttackChargeTime = 0;
     float StrafeDirectionTimer = 0;
     float AttackDistance = 0;
     float PreferredDistance = 0;
@@ -57,15 +64,13 @@ public class EnemyLogic : MonoBehaviour
     [Range(0, 10)] public float DurationToReposition;
     public float TimeBetweenAttacks;
 
-    #region YOUR CODE ==================================================================================================================================
     private bool isDefeated;
-    //private List<System.Guid> disposables = new List<System.Guid>();
-    //private EnemyMeleeActionManager enemyMeleeActionManager;
-    //private void OnDestroy()
-    //{
-    //    WickedObserver.RemoveListener(disposables);
-    //}
-    #endregion 
+    private List<System.Guid> disposables = new List<System.Guid>();
+    private EnemyMeleeActionManager enemyMeleeActionManager;
+    private void OnDestroy()
+    {
+       WickedObserver.RemoveListener(disposables);
+    }
     public enum Behavior
     {
         MovingToAttack,
@@ -78,9 +83,13 @@ public class EnemyLogic : MonoBehaviour
 
     private void Start()
     {
-        #region YOUR CODE ==================================================================================================================================
-        //enemyMeleeActionManager = GetComponent<EnemyMeleeActionManager>();
-        #endregion
+        DEBUG_ATTACK_SYMBOL = SpecialFxRequestBuilder.newBuilder("DebugMarker")
+                .setOwner(transform, true)
+                .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.PLAYER_HEIGHT, 0))
+                .setLifespan(SpecialFxRequestBuilder.LIFESPAN_FOREVER)
+                .build().Play();
+        DEBUG_ATTACK_SYMBOL.SetActive(false);
+        enemyMeleeActionManager = GetComponent<EnemyMeleeActionManager>();
         cc = GetComponent<CharacterController>();
         ai = GetComponent<IAstarAI>();
         rd = GetComponent<RagdollEnabler>(); // THIS IS NEW
@@ -88,41 +97,48 @@ public class EnemyLogic : MonoBehaviour
         PreferredDistance = MaximumDistanceToPlayer / 2;
         SpawnPoint = transform.position;
 
-        #region YOUR CODE ==================================================================================================================================
-        //disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + gameObject.GetInstanceID(), (unused) =>
-        //{
-        //    if (isDefeated)
-        //        return;
-        //    DisableForDurationBySex(float.MaxValue);
-        //}));
-        //disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + gameObject.GetInstanceID(), (unused) =>
-        //{
-        //    if (isDefeated)
-        //        return;
-        //    DisableForDurationBySex(0);
-        //}));
-        #endregion
+        disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + gameObject.GetInstanceID(), (unused) =>
+        {
+           if (isDefeated)
+               return;
+           DisableForDurationBySex(float.MaxValue);
+        }));
+        disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + gameObject.GetInstanceID(), (unused) =>
+        {
+           if (isDefeated)
+               return;
+           DisableForDurationBySex(0.5f);
+        }));
     }
 
+
+    private void LateUpdate()
+    {
+        // used for debugging
+        if (CurrentBehavior == Behavior.MovingToAttack)
+        {
+            DEBUG_ATTACK_SYMBOL.SetActive(true);
+        }
+        else
+        {
+            DEBUG_ATTACK_SYMBOL.SetActive(false);
+        }
+    }
     void Update()
     {
-        #region YOUR CODE ==================================================================================================================================
-        //if (isDefeated)
-        //    return;
-        #endregion
+        if (isDefeated)
+            return;
         if (Input.GetKeyDown(KeyCode.L))
         {
             GrabAndMoveObject(GameObject.Find("TARGET"), TargetPlayer.transform.position);
         }
 
-        #region THIS IS NEW
         // If the player is not in range, do nothing
         if (TargetPlayer == null || !cc.enabled)
             return;
 
         if (rd.state != RagdollEnabler.CurrentState.Enabled || rd.animRagdollFlag)
             return;
-        #endregion
 
         // Update the pathfinding
         UpdatePath();
@@ -165,8 +181,9 @@ public class EnemyLogic : MonoBehaviour
 
         if (MovingToSpecifiedLocation) CurrentBehavior = Behavior.Chasing;
 
-        if (Attacking || CurrentBehavior == Behavior.Disabled) return;
+        if (( Attacking && CurrentAttackChargeTime  < 0 )|| CurrentBehavior == Behavior.Disabled) return;
 
+        CurrentAttackChargeTime -= Time.deltaTime;
         TimeBetweenAttacks -= Time.deltaTime;
         MovementDirection = Vector3.zero;
 
@@ -269,8 +286,12 @@ public class EnemyLogic : MonoBehaviour
     /// </summary>
     void ChooseBehavior()
     {
+        BehaviorChangeTimerForSex -= Time.deltaTime;
         BehaviorChangeTimer -= Time.deltaTime;
+        BehaviorChangeTimerForStun -= Time.deltaTime;
         if (BehaviorChangeTimer > 0) return;
+        if (BehaviorChangeTimerForSex > 0) return;
+        if (BehaviorChangeTimerForStun > 0) return;
 
         Attacking = false;
         InAttackRange = false;
@@ -303,66 +324,53 @@ public class EnemyLogic : MonoBehaviour
         }
     }
 
-    #region YOUR CODE ==================================================================================================================================
     /// <summary>
     /// A second channel to disable enemy movement
     /// </summary>
     /// <param name="Duration">Duration.</param>
-    //public void DisableForDurationBySex(float Duration)
-    //{
-    //    BehaviorChangeTimerForSex = Duration;
-    //}
+    public void DisableForDurationBySex(float Duration)
+    {
+        CurrentBehavior = Behavior.Disabled;
+        MovementDirection = Vector3.zero;
+        BehaviorChangeTimerForSex = Duration;
+    }
 
-    //public void Knockback(Vector3 KnockbackForce, float Duration, bool ReduceOverDuration)
-    //{
-    //    DisableForDuration(Duration);
-    //    StartCoroutine(ApplyKnockback(KnockbackForce, Duration, ReduceOverDuration));
-    //}
-    //IEnumerator ApplyKnockback(Vector3 KnockbackForce, float Duration, bool ReduceOverDuration)
-    //{
-    //    float exitTime = Duration;
-    //    while (exitTime > 0)
-    //    {
-    //        exitTime -= Time.deltaTime;
-    //        if (ReduceOverDuration)
-    //        {
-    //            float lerpAmount = 1 - (exitTime / Duration);
-    //            Vector3.Lerp(KnockbackForce, Vector3.zero, lerpAmount);
-    //        }
-    //        Vector3 forwardForce = transform.forward * KnockbackForce.z;
-    //        Vector3 horizontalForce = transform.right * KnockbackForce.x;
-    //        Vector3 relativeForce = forwardForce + horizontalForce;
-    //        relativeForce.y = KnockbackForce.y;
-    //        if (KnockbackForce.y <= 0) relativeForce.y -= 10;
-    //        cc.Move(relativeForce * Time.deltaTime);
-    //        MovementDirection = relativeForce;
-    //        yield return null;
-    //    }
+    /// <summary>
+    /// A third channel to disable enemy movement
+    /// </summary>
+    /// <param name="Duration">Duration.</param>
+    public void DisableForDurationByStun(float Duration)
+    {
+        CurrentBehavior = Behavior.Disabled;
+        MovementDirection = Vector3.zero;
+        BehaviorChangeTimerForStun = Duration;
+    }
 
-    //}
+    public void TakeHit(float disableDuration)
+    {
+       TakeHit(disableDuration, Vector3.zero);
+    }
 
-    //public void TakeHit(float disableDuration)
-    //{
-    //    TakeHit(disableDuration, Vector3.zero);
-    //}
+    public void TakeHit(float disableDuration, Vector3 knockback)
+    {
+       if (knockback != Vector3.zero)
+       {
+           Knockback(knockback, 1.0f, true);
+       }
+       DisableForDuration(disableDuration);
 
-    //public void TakeHit(float disableDuration, Vector3 knockback)
-    //{
-    //    if (knockback != Vector3.zero)
-    //    {
-    //        Knockback(knockback, 1.0f, true);
-    //    }
-    //    DisableForDuration(disableDuration);
+    }
 
-    //}
-
+    public bool isStunned()
+    {
+        return BehaviorChangeTimerForStun > 0;
+    }
     public void Defeat()
     {
-        BehaviorChangeTimer = float.MaxValue;
-        isDefeated = true;
-        CurrentBehavior = Behavior.Disabled;
+       BehaviorChangeTimer = float.MaxValue;
+       isDefeated = true;
+       CurrentBehavior = Behavior.Disabled;
     }
-    #endregion
 
     #region == Pathfinding ==
     /// <summary>
@@ -393,11 +401,12 @@ public class EnemyLogic : MonoBehaviour
 
         if (MovingToTargetPosition)
         {
-            CurrentBehavior = Behavior.Repositioning;
+            if (CurrentBehavior != Behavior.MovingToAttack)
+            	CurrentBehavior = Behavior.Repositioning;
             BehaviorChangeTimer = 1f;
             ai.maxSpeed = CurrentSpeed;
         }
-        if (ai.reachedDestination || Vector3.Distance(transform.position, ai.destination) <= 1.5)
+        if ((ai.reachedDestination || Vector3.Distance(transform.position, ai.destination) <= 1.5) && CurrentBehavior != Behavior.MovingToAttack)
         {
             MovingToTargetPosition = false;
             MovingToSpecifiedLocation = false;
@@ -447,15 +456,44 @@ public class EnemyLogic : MonoBehaviour
     /// <param name="AttackDuration">Duration of the attack animation</param>
     public void StartAttack(float AttackDuration)
     {
+        CurrentAttackChargeTime = AttackDuration;
         BehaviorChangeTimer = AttackDuration;
         Attacking = true;
     }
 
+    // todo set the time to attack
     public void SetAttackDistance(float Distance)
     {
         AttackDistance = Distance;
         CurrentBehavior = Behavior.MovingToAttack;
-        BehaviorChangeTimer = 3;
+        BehaviorChangeTimer = 3; // 3 seconds to move into position
+    }
+
+    // original style GREAT FOR RANGE ATTACKS!
+    /// <summary>
+    /// Moves to the current attack range for the enemy with slight buffer to avoid jitter
+    /// </summary>
+    public void MoveToAttackDistanceThenStop()
+    {
+        // Set the movement direction toward the attack distance direction
+        float distanceToPlayer = Vector3.Distance(TargetPlayer.transform.position, transform.position);
+        if (distanceToPlayer * 0.95f > AttackDistance)
+        {
+            InAttackRange = false;
+            SetPathfindingLocation(TargetPlayer.transform.position);
+            MovementDirection = ai.steeringTarget - transform.position;
+        }
+        else
+        {
+            InAttackRange = true;
+            DisablePathfinding();
+            if (!Attacking)
+            {
+                // call to the attack
+                float warningTime = enemyMeleeActionManager.StartRandomAttack();
+                StartAttack(warningTime);
+            }
+        }
     }
 
     /// <summary>
@@ -474,11 +512,15 @@ public class EnemyLogic : MonoBehaviour
         else
         {
             InAttackRange = true;
-            DisablePathfinding();
-            StartAttack(1);
+
+            if (!Attacking)
+    {
+                // call to the attack
+                float warningTime = enemyMeleeActionManager.StartRandomAttack();
+                StartAttack(warningTime);
+            }
         }
     }
-    
     public void GrabAndMoveObject(GameObject ObjectToGrab, Vector3 Destination)
     {
         StopAllCoroutines();
