@@ -7235,6 +7235,7 @@ MonoBehaviour:
   TargetDestination: {x: 0, y: 0, z: 0}
   MovementDirection: {x: 0, y: 0, z: 0}
   EnemyType: 0
+  CurrentSpeed: 0
   MaxChasingSpeed: 4
   MaxRepositioningSpeed: 3
   MaxStrafingSpeed: 3
@@ -10869,6 +10870,7 @@ MonoBehaviour:
   TargetDestination: {x: 0, y: 0, z: 0}
   MovementDirection: {x: 0, y: 0, z: 0}
   EnemyType: 0
+  CurrentSpeed: 0
   MaxChasingSpeed: 4
   MaxRepositioningSpeed: 3
   MaxStrafingSpeed: 3
@@ -20050,6 +20052,7 @@ MonoBehaviour:
   TargetDestination: {x: 0, y: 0, z: 0}
   MovementDirection: {x: 0, y: 0, z: 0}
   EnemyType: 0
+  CurrentSpeed: 0
   MaxChasingSpeed: 4
   MaxRepositioningSpeed: 3
   MaxStrafingSpeed: 3
@@ -24080,6 +24083,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 6880093200319388452, guid: af8790dcf286b5043812b584429b07c4,
+        type: 3}
+      propertyPath: m_Name
+      value: vGameController
+      objectReference: {fileID: 0}
     - target: {fileID: 6308082651757209352, guid: af8790dcf286b5043812b584429b07c4,
         type: 3}
       propertyPath: effects.Array.size
@@ -24096,11 +24104,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8066123911232342069, guid: fdb573d4014aef1478e688eac4f534bd,
         type: 3}
-    - target: {fileID: 6880093200319388452, guid: af8790dcf286b5043812b584429b07c4,
-        type: 3}
-      propertyPath: m_Name
-      value: vGameController
-      objectReference: {fileID: 0}
     - target: {fileID: 6880093200319388454, guid: af8790dcf286b5043812b584429b07c4,
         type: 3}
       propertyPath: m_LocalPosition.x

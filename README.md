@@ -4,7 +4,8 @@
 1. Create a new 3D project in unity
 2. Clone in these files. (this repo's root is the projects root see pic below)
 ![](https://github.com/robert-irribarren/mini-elina/blob/master/main_directory.jpg?raw=true)
-
+3. Player settings - allow unsafe code
+4. Player settings - Using .NET 4.0
 
 ## Dependencies (download: https://mega.nz/#!vaZGyISA!r3nXOEheTNjMoJUN4lmedCuQN-D1HxoQHgAdZJLAufE )
 1. Invector 3rd person shooter template
