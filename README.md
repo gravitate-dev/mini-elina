@@ -6,7 +6,7 @@
 ![](https://github.com/robert-irribarren/mini-elina/blob/master/main_directory.jpg?raw=true)
 
 
-## Dependencies (download: https://mega.nz/#!HHxkEIQJ!IhByj3QduecYjY95q5O7RID4lzssSlDIqJtOgN0KiMg )
+## Dependencies (download: https://mega.nz/#!vaZGyISA!r3nXOEheTNjMoJUN4lmedCuQN-D1HxoQHgAdZJLAufE )
 1. Invector 3rd person shooter template
 2. A* Pathfinding Pro
 3. Animancer PRO
