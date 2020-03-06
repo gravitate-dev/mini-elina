@@ -30,7 +30,6 @@ TagManager:
   - CoverPoint
   - Interactable
   - AIAction
-  - Additional
   layers:
   - Default
   - TransparentFX
@@ -49,7 +48,7 @@ TagManager:
   - HeadTrack
   - BodyPart
   - BlockAIRayCast
-  - Hitbox
+  - 
   - 
   - 
   - 
