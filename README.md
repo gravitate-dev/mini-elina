@@ -7,7 +7,7 @@
 3. Player settings - allow unsafe code
 4. Player settings - Using .NET 4.0
 
-## Dependencies (download: https://mega.nz/#!vaZGyISA!r3nXOEheTNjMoJUN4lmedCuQN-D1HxoQHgAdZJLAufE )
+## Dependencies (download: https://mega.nz/#!HbgXTbyB!UbdlvPKMSTpv_PGBZKdfXkx7jqOP-EKYP2S-Y80bAB4 )
 1. Invector 3rd person shooter template
 2. A* Pathfinding Pro
 3. Animancer PRO
