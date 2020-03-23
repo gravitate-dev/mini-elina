@@ -1,5 +1,6 @@
 ﻿using Animancer;
 using JacobGames.SuperInvoke;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ using UnityEngine;
 public class FreeFlowAnimatorController : MonoBehaviour
 {
     private HybridAnimancerComponent animancer;
+    private Transform head;
     private int GO_ID;
     private FreeFlowTargetable freeFlowTargetable;
 
@@ -24,6 +26,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
         {
             animancer = GetComponentInChildren<HybridAnimancerComponent>();
         }
+        head = animancer.Animator.GetBoneTransform(HumanBodyBones.Head);
         freeFlowTargetable = GetComponent<FreeFlowTargetable>();
         disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj) =>
         {
@@ -44,18 +47,8 @@ public class FreeFlowAnimatorController : MonoBehaviour
             var lookPos = move.attacker.transform.position;
             lookPos.y = transform.position.y;
             transform.LookAt(lookPos);
-            float delay = move.victimAnimationDelay / move.attackerAnimationSpeed;
-            SuperInvoke.Run(delay, () =>
-            {
-                if (move.victimReactionId == FreeFlowTargetable.HIT_RESULT_STUN)
-                {
-                    StartStun();
-                }
-                else
-                {
-                PlayAnimation(move);
-                }
-            });
+            
+            StartCoroutine(HandleVictimReaction(move));
         }
         else
         {
@@ -65,6 +58,19 @@ public class FreeFlowAnimatorController : MonoBehaviour
         }
     }
 
+    private IEnumerator HandleVictimReaction(FreeFlowAttackMove move)
+    {
+        float delay = move.victimAnimationDelay / move.attackerAnimationSpeed;
+        yield return new WaitForSecondsRealtime(delay);
+        if (move.victimReactionId == FreeFlowTargetable.HIT_RESULT_STUN)
+        {
+            StartStun();
+        }
+        else
+        {
+            PlayAnimation(move);
+        }
+    }
     private void PlayAnimation(FreeFlowAttackMove move)
     {
         WickedObserver.SendMessage("OnFreeFlowAnimationStart:" + GO_ID);
@@ -76,11 +82,12 @@ public class FreeFlowAnimatorController : MonoBehaviour
                 // these are punch and kicks
                 //SoundSystem.INSTANCE.PlaySound("melee_impact", transform);
 
-                SpecialFxRequestBuilder.newBuilder("AttackSparkle")
+                GameObject punchEffect = SpecialFxRequestBuilder.newBuilder("AttackSparkle")
                 .setOwner(transform, true)
                 .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.HALF_PLAYER_HEIGHT, 0))
                 .setOffsetRotation(new Vector3(-90, 0, 0))
                 .build().Play();
+                StartCoroutine(Reclaim(punchEffect, 0.5f));
             }
             // i am victim
             string animationToPlay = move.DEBUG_VICTIM != null ? move.DEBUG_VICTIM.name : move.victimAnimation;
@@ -91,12 +98,12 @@ public class FreeFlowAnimatorController : MonoBehaviour
                 animationToPlay = "KB_UpperKO_Flip";
             }*/
             AnimationClip clip = AnimationClipHandler.INSTANCE.ClipByName(animationToPlay);
-                AnimancerState state = animancer.Play(clip, 0.1f, FadeMode.FixedDuration);
-                state.Time = 0;
-                state.Events.OnEnd = ReturnToNormal;
-            }
-            else
-            {
+            AnimancerState state = animancer.Play(clip, 0.1f, FadeMode.FixedDuration);
+            state.Time = 0;
+            state.Events.OnEnd = ReturnToNormal;
+        }
+        else
+        {
             if (move.moveType == 3)
             {
                 // throws require two to be together
@@ -140,13 +147,16 @@ public class FreeFlowAnimatorController : MonoBehaviour
     /// </summary>
     private void RemoveDizzyStun()
     {
-        if (stunEffectInstance != null)
+        /*if (stunEffectInstance != null)
         {
-            Destroy(stunEffectInstance);
+            SpecialFxWizard.StoreToPool(stunEffectInstance);
+        }*/
+        if (stunEffectInstance != null) { 
+        Destroy(stunEffectInstance);
         }
         ReturnToNormal();
     }
-    
+
     private void StartStun()
     {
         if (stunEffectInstance != null)
@@ -156,11 +166,20 @@ public class FreeFlowAnimatorController : MonoBehaviour
         float stunTime = freeFlowTargetable.enemyStunTime;
         Invoke("RemoveDizzyStun", stunTime);
         stunEffectInstance = SpecialFxRequestBuilder.newBuilder("Stunned")
-            .setOwner(transform, true)
-            .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.PLAYER_HEIGHT, 0))
+            .setOwner(head, true)
+            .setOffsetPosition(new Vector3(0,0, 0))
             .setOffsetRotation(new Vector3(-90, 0, 0))
-            .setLifespan(stunTime)
             .build().Play();
+        StartCoroutine(Reclaim(stunEffectInstance, stunTime));
         animancer.Play(AnimationClipHandler.INSTANCE.ClipByName("Stunned"));
+    }
+
+    private IEnumerator Reclaim(GameObject effectInstance, float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        if (effectInstance != null)
+        {
+            Destroy(effectInstance);
+        }
     }
 }

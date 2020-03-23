@@ -30,7 +30,7 @@ public class FreeFlowTargetable : MonoBehaviour
     public int sexToHitsFactor = 3;
     [BoxGroup("Defense Stats")]
     public int hitsToStun = 8;
-
+    
     [BoxGroup("Stun Settings")]
     public int stunTimeFreeHitsAllowed = 2;
     [BoxGroup("Stun Settings")]
@@ -44,16 +44,10 @@ public class FreeFlowTargetable : MonoBehaviour
     [SerializeField]
     [HideInEditorMode]
     private int currentHitsToStunCountdown;
-    [SerializeField]
-    [HideInEditorMode]
-    private int currentKnockDowns;
 
-    private bool defeated = false;
+    public bool defeated = false;
     [HideInEditorMode]
     public bool isSexing;
-    [SerializeField]
-    [HideInEditorMode]
-    private bool targetableSex;
 
     private int GO_ID;
     private RagdollEnabler ragdollEnabler;
@@ -63,8 +57,8 @@ public class FreeFlowTargetable : MonoBehaviour
     private List<System.Guid> disposables = new List<System.Guid>();
     private float DisableAttackbleTime;
     private float TargetSexableTime;
-    
-    
+
+
 
     // Start is called before the first frame update
     void Start()
@@ -79,28 +73,25 @@ public class FreeFlowTargetable : MonoBehaviour
         {
             HMove temp = (HMove)move;
             isSexing = false;
-            if (temp.victim.GO_ID == GO_ID)
+            if (temp.victim.gameObject.GetInstanceID() == GO_ID)
             {
                 // take damage if i am being sexed
-            sexHit();
+                sexHit();
             }
         }));
         // to know while i am being sexed
         disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj)=>
         {
+            if (isSexing) { return; }
             isSexing = true;
-            if (defeated)
+            CancelInvoke();
+            if (!HentaiSexCoordinator.isPlayerInvolved((HMove)obj))
             {
-                return; // ignore when defeated
+                Invoke("endSex", SEX_TIME);
             }
             
-            CancelInvoke();
-            if (HentaiSexCoordinator.isPlayerInvolved((HMove)obj))
-            {
-                // when the player sexes we let it happen forever.
-                return;
-            }
-            Invoke("endSex", SEX_TIME);
+            
+            
             
         }));
 
@@ -135,8 +126,7 @@ public class FreeFlowTargetable : MonoBehaviour
         isSexing = false;
         EnableSexable(0);
         DisableAttackble(0);
-        targetableSex = false;
-        //hentaiSexCoordinator.stopAllSexIfAny();
+        hentaiSexCoordinator.StopAllSexIfAny();
     }
     
     public bool isTargetSexable()
@@ -160,7 +150,8 @@ public class FreeFlowTargetable : MonoBehaviour
         enemyLogic.RestartMovement();
         enemyLogic.DisableForDuration(move.victimAnimationDelay + 0.2f);
         yield return new WaitForSeconds(move.victimAnimationDelay);
-        ragdollEnabler.DebugShowOff();
+        // sad removed it
+        //ragdollEnabler.DebugShowOff();
 
         // normal stun hit time
         if (move.victimReactionId == HIT_RESULT_STUN)
@@ -175,7 +166,7 @@ public class FreeFlowTargetable : MonoBehaviour
             enemyLogic.DisableForDuration(move.victimStunTime);
         }
     }
-
+    
     public void sexHit()
     {
         currentHits += sexToHitsFactor;
@@ -187,21 +178,12 @@ public class FreeFlowTargetable : MonoBehaviour
 
     private void SetToDefeated()
     {
-        targetableSex = false;
         enemyLogic.Defeat();
-        /*DecisionProvider decisionProvider = GetComponent<DecisionProvider>();
-        if (decisionProvider != null)
-        {
-            decisionProvider.defeated = true;
-        }*/
         defeated = true;
 
-        AnimancerState state = animancer.Play(AnimationClipHandler.INSTANCE.ClipByName("AnimeDeath_FallForward"));
-        state.Events.OnEnd = () =>
-        {
-            Destroy(gameObject, 0.4f);
-        };
-        
+        animancer.Play(AnimationClipHandler.INSTANCE.ClipByName("AnimeDeath_FallForward"));
+        Destroy(gameObject, 1f);
+
     }
     public int hit()
     {
@@ -216,9 +198,10 @@ public class FreeFlowTargetable : MonoBehaviour
         }
         currentHits++;
         if (currentHits + 1 >= hitsForDefeat)
-            {
-                return HIT_RESULT_DEFEAT;
-            }
+        {
+            SetToDefeated();
+            return HIT_RESULT_DEFEAT;
+        }
         currentHitsToStunCountdown--;
         if (currentHitsToStunCountdown <= 0)
         {
@@ -229,8 +212,8 @@ public class FreeFlowTargetable : MonoBehaviour
     }
 
     public bool isTargetableForAttack()
-    {
-        return DisableAttackbleTime < 0;
+    {   //  no ragdolled enemies          no defeated    no sexing 
+        return (ragdollEnabler==null || ragdollEnabler.targetable ) && !defeated && !isSexing && DisableAttackbleTime < 0;
     }
 
     private void stun()
@@ -251,7 +234,7 @@ public class FreeFlowTargetable : MonoBehaviour
     }
 
     private void DisableAttackble(float duration)
-        {
+    {
         DisableAttackbleTime = duration;
     }
     private void EnableSexable(float duration)

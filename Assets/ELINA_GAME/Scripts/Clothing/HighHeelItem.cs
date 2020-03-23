@@ -24,6 +24,7 @@ public class HighHeelItem : MonoBehaviour
         }
         int GO_ID = highHeelCharacterController.gameObject.GetInstanceID();
         disposables.Add(WickedObserver.AddListener("OnInventoryClose", (obj)=> { ModifyHeel(); }));
+        disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + GO_ID, (obj) => { ModifyHeel(); }));
         disposables.Add(WickedObserver.AddListener("OnRequestHighHeelItemRefresh:" + GO_ID, (obj) => { ModifyHeel(); }));
     }
 

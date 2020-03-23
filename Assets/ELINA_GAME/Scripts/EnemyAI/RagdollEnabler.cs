@@ -56,6 +56,13 @@ public class RagdollEnabler : MonoBehaviour
             BeginRagdoll();
         }
 
+        if (state == CurrentState.Enabled)
+        {
+            foreach (LimbInformation limb in Limbs)
+            {
+                limb.Rigidbody.Sleep();
+            }
+        }
         GetUpFromRagdoll();
     }
 
@@ -84,6 +91,11 @@ public class RagdollEnabler : MonoBehaviour
             {
                 LimbInformation bodyPart = new LimbInformation();
                 bodyPart.Transform = c as Transform;
+
+                bodyPart.Rigidbody = c.GetComponent<Rigidbody>();
+                bodyPart.Collider = c.GetComponent<Collider>();
+                bodyPart.Rigidbody.Sleep();
+                bodyPart.Collider.enabled = false;
                 Limbs.Add(bodyPart);
             }
         }
@@ -120,7 +132,12 @@ public class RagdollEnabler : MonoBehaviour
             if (blendAmount <= 0)
             {
                 state = CurrentState.Enabled;
-        }
+                foreach (LimbInformation limb in Limbs)
+                {
+                    limb.Rigidbody.Sleep();
+                    limb.Collider.enabled = false;
+                }
+            }
         }
         else if (state == CurrentState.Enabled)
         {
@@ -140,10 +157,15 @@ public class RagdollEnabler : MonoBehaviour
     /// </summary>
     public void BeginRagdoll()
     {
+        foreach (LimbInformation limb in Limbs)
+        {
+            limb.Rigidbody.WakeUp();
+            limb.Collider.enabled = true;
+        }
         EnableRagdoll();
         state = CurrentState.Disabled;
     }
-    
+
     /// <summary>
     /// Blends from the ragdoll into the animation state provided
     /// </summary>
@@ -199,7 +221,7 @@ public class RagdollEnabler : MonoBehaviour
         // Get the heights of the hip and head bones so we can compare the distance between them
         float hipHeight = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Hips).position.y;
         float headHeight = hybridAnimancerComponent.Animator.GetBoneTransform(HumanBodyBones.Head).position.y;
-        
+
         // If the difference between the heights of the head and hips is less than 20% of the character controllers height
         // and the body has been on the ground longer than the required duration, stand the character up
         if (Mathf.Abs(hipHeight - headHeight) <= cc.height * 0.2f && timeSpendOnGround > TimeUntilStandingUp)
@@ -334,7 +356,7 @@ public class RagdollEnabler : MonoBehaviour
             cc.transform.position = calculatedRootPosition;
             cc.enabled = true;
             transform.position = calculatedRootPosition;
-    }
+        }
     }
 
     /// <summary>
@@ -376,6 +398,8 @@ public class RagdollEnabler : MonoBehaviour
         public Transform Transform;
         public Vector3 OriginalPosition;
         public Quaternion OriginalRotation;
+        public Rigidbody Rigidbody;
+        public Collider Collider;
     }
 
     public enum CurrentState

@@ -14,7 +14,6 @@ using static HMove;
 public class HentaiSexCoordinator : MonoBehaviour
 {
     public const string EVENT_STOP_H_MOVE_LOCAL = "EVENT_STOP_H_MOVE:";
-
     /// <summary>
     /// Change this via the setGenderId
     /// </summary>
@@ -39,63 +38,98 @@ public class HentaiSexCoordinator : MonoBehaviour
 
     [HideInEditorMode]
     public string nameOfDeviceOn;
-    [HideInEditorMode]
-    public string leadAttackerGO_ID;
-    [HideInEditorMode]
-    public int currentAttackerCount;
-    [HideInEditorMode]
-    public int sexLeaderGO_ID;
 
+    // do not set this
     private HMove currentMove;
-    private static string[] maleParts = new string[] { "ass","flat","foot","hand","mouth","penis","stomach" };
+    private static string[] maleParts = new string[] { "ass", "flat", "foot", "hand", "mouth", "penis", "stomach" };
     private static string[] femaleParts = new string[] { "ass", "boobs", "foot", "hand", "mouth", "pussy", "stomach" };
     private static string[] futaParts = new string[] { "ass", "boobs", "foot", "hand", "mouth", "penis", "pussy", "stomach" };
-    
+
     /// <summary>
     /// Add penis here if you have the futa spell
     /// </summary>
     private HentaiAnimatorController animatorController;
     private HentaiMoveSystem hentaiMoveSystem;
-    private bool knockedDown;
+    private HentaiHeatController hentaiHeatController;
+    private bool heartBeatPause;
     private int GO_ID;
+
+    //optional
+    private BlendShapeItemCharacterController bsicc;
 
     private List<System.Guid> disposables = new List<System.Guid>();
     void Awake()
     {
         GO_ID = gameObject.GetInstanceID();
+        bsicc = GetComponent<BlendShapeItemCharacterController>();
         hentaiMoveSystem = GameObject.FindObjectOfType<HentaiMoveSystem>();
+        hentaiHeatController = GetComponent<HentaiHeatController>();
         animatorController = GetComponent<HentaiAnimatorController>();
-        disposables.Add(WickedObserver.AddListener("onSexyTimeJoinRequest:" + GO_ID, onSexyTimeJoinRequest));
-        disposables.Add(WickedObserver.AddListener("onSexyTimeEventMessage:" + GO_ID, onSexyTimeEventMessage));
-        disposables.Add(WickedObserver.AddListener("onStateKnockedOut:" + GO_ID, (obj)=> { knockedDown = true;}));
-        disposables.Add(WickedObserver.AddListener("onStateRegainControl:" + GO_ID, (obj)=>
+        disposables.Add(WickedObserver.AddListener("onStateRegainControl:" + GO_ID, (obj) =>
         {
-            knockedDown = false;
-            stopAllSex();
+            StopAllSexIfAny();
         }));
-        disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj)=>
+        disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj) =>
         {
             currentMove = new HMove((HMove)obj); // update loop for hentai moves
         }));
-        disposables.Add(WickedObserver.AddListener("StartMasterbating:" + GO_ID, StartMasterbating));
         disposables.Add(WickedObserver.AddListener("OnDeath:" + GO_ID, (obj) =>
         {
             WickedObserver.SendMessage("onStateKnockedOut:" + GO_ID);
         }));
+        disposables.Add(WickedObserver.AddListener(EVENT_STOP_H_MOVE_LOCAL + GO_ID, (unused) =>
+         {
+             currentMove = null;
+         }));
 
         // every 2 seconds refresh all attackers due to the orgasm % changing
-        InvokeRepeating("resynchronizeAllAttackers", 0, 1f);
+        InvokeRepeating("HentaiHeartBeat", 0, 1f);
+    }
+
+    private void HentaiHeartBeat()
+    {
+        if (currentMove == null)
+        {
+            if (hentaiHeatController != null && hentaiHeatController.currentLust > 1)
+            {
+                StartMasterbating();
+            }
+            return;
+        }
+        if (!animatorController.CanSkipCurrentSceneWithHeartBeat())
+        {
+            return;
+        }
+
+        // check if victim is gone
+        if (currentMove.victim.gameObject == null)
+        {
+            StopAllSexIfAny();
+            return;
+        }
+
+        // if i am victim keep going
+        if (currentMove.victim.gameObject != null && GO_ID == currentMove.victim.gameObject.GetInstanceID())
+        {
+            ResynchronizeAllSex();
+        }
     }
 
     private void OnDestroy()
     {
+        // free others before i die!
+        StopAllSexIfAny();
         WickedObserver.RemoveListener(disposables);
     }
 
     public void setGender(int gender)
     {
+        if (genderId != gender)
+        {
+            WickedObserver.SendMessage("OnGenderChange:" + GO_ID, gender);
+        }
         genderId = gender;
-        WickedObserver.SendMessage("OnGenderChange:" + GO_ID, gender);
+
     }
 
     public class SexyTimeJoinRequest
@@ -118,7 +152,7 @@ public class HentaiSexCoordinator : MonoBehaviour
         /// <summary>
         /// This is the victim's ID
         /// </summary>
-        public int senderGO_ID;
+        public GameObject sender;
         public string nameOfDeviceOn;
         public string[] availableParts;
         public bool isLead;
@@ -128,172 +162,225 @@ public class HentaiSexCoordinator : MonoBehaviour
     }
 
 
-    /// <summary>
-    /// Documentation of mechanism
-    /// When player is knockedDown, all enemies send a SexyTimeJoinReq,
-    /// The victim then replies to the first one it hears as isLead=true;
-    /// The lead attacker then will reply with a sexMove,
-    /// </summary>
 
-    // called by the invector AI
-    public void sendSexyTimeRequest(int victimGO_ID)
+    public const int TRY_SEX_RESULT_FAIL = 1;
+    public const int TRY_SEX_RESULT_JOINED_IN = 2;
+    public const int TRY_SEX_RESULT_PICK_MOVE = 3;
+    /// <summary>
+    /// Attempts to sex the target
+    /// </summary>
+    /// <param name="victim">target of the sex</param>
+    /// <returns>true if success, false if not</returns>
+    public int TrySexTarget(GameObject victim)
     {
-        SexyTimeJoinRequest request = new SexyTimeJoinRequest();
-        request.requestor = transform;
-        request.senderGO_ID = GO_ID;
-        request.availableParts = getAvailableParts();
-        WickedObserver.SendMessage("onSexyTimeJoinRequest:" + victimGO_ID, request);
+        if (victim == null)
+        {
+            return TRY_SEX_RESULT_FAIL;
+        }
+        HentaiSexCoordinator victimCoordinator = victim.GetComponent<HentaiSexCoordinator>();
+        return victimCoordinator.HandleTrySex(victim);
     }
 
-    private void onSexyTimeJoinRequest(object message)
+    private int HandleTrySex(GameObject sender)
     {
-        SexyTimeJoinRequest request = (SexyTimeJoinRequest)message;
-        // only first time leader gets to decide what to do with me
-        if (sexLeaderGO_ID == 0 || (currentMove != null && currentMove.interruptable))
+        if (sender == null)
         {
-            sexLeaderGO_ID = request.senderGO_ID;
-            Debug.Log("Victim : " + GO_ID + " is now " + request.senderGO_ID + "'s bitch!");
-            SexyTimeJoinResponse response = new SexyTimeJoinResponse();
-            if (currentMove!=null && currentMove.location != null && currentMove.location.Equals("attacker"))
-            {
-                response.sexLocation = request.requestor.transform.position;
-                response.sexRotation = request.requestor.transform.rotation;
-            }
-            else
-            {
-                response.sexLocation = transform.position;
-                response.sexRotation = transform.rotation;
-            }
-            response.requestorGO_ID = request.senderGO_ID;
-            response.senderGO_ID = GO_ID; // i am sending a message
-            response.nameOfDeviceOn = nameOfDeviceOn;
-            response.availableParts = getAvailableParts(); // get victims available fuck parts
-            response.isLead = true;
-            WickedObserver.SendMessage("onSexyTimeJoinResponse:"+request.senderGO_ID, response);
-            return;
+            return TRY_SEX_RESULT_FAIL;
         }
+        HentaiSexCoordinator senderCoordinator = sender.GetComponent<HentaiSexCoordinator>();
 
-        if (sexLeaderGO_ID != request.senderGO_ID && currentMove != null)
+        if (IsSexing() && !currentMove.interruptable)
         {
-            Debug.Log("I WANNA JOIN!");
-            // if the requestor can join then we notify
-            int attackerIdx = canJoinInTheSex(request.senderGO_ID, request.availableParts);
-            if (attackerIdx == -1)
+            if (!AmIVictim())
             {
-                Debug.Log("No room for you");
+                // wrong person to ask for sex
+                return TRY_SEX_RESULT_FAIL;
+            }
+            // try to join
+            // attempt to join the sex
+            int openSpaceIdx = currentMove.GetOpenAttackerIndex(sender, senderCoordinator.getAvailableParts());
+            if (openSpaceIdx == -1)
+            {
+                return TRY_SEX_RESULT_FAIL;
+            }
+            currentMove.attackers[openSpaceIdx].gameObject = sender;
+            ResynchronizeAllSex();
+            return TRY_SEX_RESULT_JOINED_IN;
+        }
+        else
+        {
+            return TRY_SEX_RESULT_PICK_MOVE;
+        }
+    }
+
+    public void StartNewSexMove(GameObject leadAttacker, HMove move, bool isPlayground)
+    {
+        StopAllSexIfAny();
+        HMove copy = new HMove(move);
+        if (copy.location != null && copy.location.Equals("attacker"))
+        {
+            // location attacker is used for a device!
+            copy.sexLocationPosition = leadAttacker.transform.position;
+            copy.sexLocationRotation = leadAttacker.transform.rotation;
+        }
+        else
+        {
+            // this needs to be grounded
+            
+            // method #1
+            /*Vector3 basePos = transform.position;
+            if (bsicc != null)
+            {
+                basePos.y -= bsicc.currentHeelHeight;
+            }
+            copy.sexLocationPosition = basePos;
+            */
+
+            // method #2
+            Vector3 floorPos = GetFloor();
+            if (floorPos == Vector3.zero)
+            {
+                //dont have sex if theres no floor
+                StopAllSexIfAny();
                 return;
             }
-            //since a new attacker joined everyone should sync on the same HMove
-            currentMove.attackers[attackerIdx].GO_ID = request.senderGO_ID;
-            if (GO_ID == currentMove.victim.GO_ID)
+            copy.sexLocationPosition = floorPos;
+            copy.sexLocationRotation = transform.rotation;
+        }
+        copy.attackers[0].gameObject = leadAttacker;
+        copy.victim.gameObject = gameObject;
+        copy.playground = isPlayground;
+        currentMove = copy;
+        ResynchronizeAllSex();
+    }
+
+    private Vector3 GetFloor()
+    {
+        Vector3 center = transform.position;
+        center.y += 0.2f; // raise up a little
+        Debug.DrawRay(center, -Vector3.up * (2.0f), Color.white);
+        RaycastHit[] hits = Physics.RaycastAll(center, -Vector3.up, 2.0f);
+        float minDistance = float.MaxValue;
+        Vector3 floorPointForSex = Vector3.zero;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.transform.gameObject.layer == 0) // 0 is floor
             {
-                resynchronizeAllAttackers();
-            } else
-            {
-                Debug.LogError("I am not a victim i can not synchronize everyone");
+                // floor
+                if (hit.distance <= minDistance)
+                {
+                    minDistance = hit.distance;
+                    floorPointForSex = hit.point;
+                }
             }
         }
+        return floorPointForSex;
+    }
+
+    public void StartNewSoloMove(HMove move, bool isPlayground)
+    {
+        StopAllSexIfAny();
+        HMove copy = new HMove(move);
+        Vector3 basePos = transform.position;
+        copy.sexLocationPosition = basePos;
+        copy.sexLocationRotation = transform.rotation;
+        copy.victim.gameObject = gameObject;
+        copy.playground = isPlayground;
+        currentMove = copy;
+        ResynchronizeAllSex();
+    }
+
+    private void StartMasterbating()
+    {
+        StopAllSexIfAny();
+        HMove move;
+        if (genderId == GENDER_FEMALE)
+        {
+            move = HentaiMoveSystem.INSTANCE.getFemaleMasterbation();
+        }
+        else
+        {
+            move = HentaiMoveSystem.INSTANCE.getMaleMasterbation();
+        }
+        StartNewSoloMove(move, false);
     }
 
     /// <summary>
     /// This is only called from the victim
     /// </summary>
-    public void stopAllSex()
-    {
-        sexLeaderGO_ID = 0;
-        if (currentMove != null)
-        {
-            WickedObserver.SendMessage(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + currentMove.victim.GO_ID);
-            if (currentMove.attackers != null)
-            {
-                for (int i = 0; i < currentMove.attackers.Length; i++)
-                {
-                    WickedObserver.SendMessage(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + currentMove.attackers[i].GO_ID);
-                }
-            }
-        } else
-        {
-            Debug.LogError("Critical, there is no h move going on we need to evacuate all players");
-            WickedObserver.SendMessage(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + IAmElina.ELINA.GetInstanceID());
-        }
-        currentMove = null;
-        
-    }
-    // only the victim does this
-    public void resynchronizeAllAttackers()
+    public void StopAllSexIfAny()
     {
         if (currentMove == null)
         {
             return;
         }
-        if (currentMove.victim.GO_ID != GO_ID)
+        HMove temp = new HMove(currentMove);
+        if (temp.victim.gameObject != null)
+        {
+            WickedObserver.SendMessage(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + temp.victim.gameObject.GetInstanceID(), currentMove);
+        }
+        if (temp.attackers != null)
+        {
+            int length = temp.attackers.Length;
+            for (int i = 0; i < length; i++)
+            {
+                GameObject attackerObj = temp.attackers[i].gameObject;
+                if (attackerObj == null)
+                {
+                    continue;
+                }
+                int ID = attackerObj.GetInstanceID();
+                WickedObserver.SendMessage(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + ID, temp);
+            }
+        }
+        currentMove = null;
+    }
+
+    /// <summary>
+    /// Only victim refreshses everyone 
+    /// </summary>
+    /// <param name="isInitial">Only when its the first move started do we turn isSexingOn</param>
+    public void ResynchronizeAllSex()
+    {
+        
+        // am i victim?
+        if (currentMove == null ||
+            currentMove.victim.gameObject == null ||
+            currentMove.victim.gameObject.GetInstanceID() != GO_ID)
         {
             return;
         }
         HMove animatorMove = animatorController.currentHMove;
+
+        // check heat for damage
+        float orgasmPercentage = hentaiHeatController.getOrgasmPercentage();
+        if (orgasmPercentage > 1)
+        {
+            // orgasm
+            animatorMove.playClimax = true;
+            hentaiHeatController.ZeroHeat();
+        }
         if (animatorMove != null)
         {
             currentMove.loopCountSync = animatorMove.loopCountSync;
-            currentMove.playClimaxSync = animatorMove.playClimaxSync;
+            currentMove.playClimax = animatorMove.playClimax;
             currentMove.sceneIndexSync = animatorMove.sceneIndexSync;
         }
         if (currentMove.attackers != null)
         {
             for (int i = 0; i < currentMove.attackers.Length; i++)
             {
-                int go_id = currentMove.attackers[i].GO_ID;
+                if (currentMove.attackers[i].gameObject == null)
+                {
+                    Debug.LogError("DEAD MAN FUCKIN");
+                    continue;
+                }
+                int go_id = currentMove.attackers[i].gameObject.GetInstanceID();
                 WickedObserver.SendMessage("onStartHentaiMove:" + go_id, currentMove);
             }
         }
-        // send one for the victim itself
         WickedObserver.SendMessage("onStartHentaiMove:" + GO_ID, currentMove);
     }
-    private void onSexyTimeEventMessage(object message)
-    {
-        SexyTimeEventMessage data = (SexyTimeEventMessage)message;
-        if (data.eventId == SexyTimeEventMessage.EVENT_START_H_MOVE)
-        {
-            currentMove = new HMove(data.move);
-            /**
-             * If location needs to be set for attacker, do so in the <see cref="HentaiDialogOptionEvent"/>
-             **/
-            if (currentMove.location == null || !currentMove.location.Equals("attacker"))
-            {
-                currentMove.sexLocationPosition = transform.position;
-                currentMove.sexLocationRotation = transform.rotation;
-            }
-            resynchronizeAllAttackers();
-        } else if (data.eventId == SexyTimeEventMessage.EVENT_FREE_FROM_LEAD)
-        {
-            stopAllSex();
-        }
-    }
-
-    public void sendSTEM_stopHentaiMove()
-    {
-        if (currentMove == null)
-        {
-            return;
-        }
-        SexyTimeEventMessage message = new SexyTimeEventMessage();
-        message.eventId = SexyTimeEventMessage.EVENT_FREE_FROM_LEAD;
-        message.senderGO_ID = GO_ID;
-        string topic = "onSexyTimeEventMessage:" + currentMove.victim.GO_ID;
-        WickedObserver.SendMessage(topic, message);
-    }
-
-    // send the move you are a leader
-    // if you are not a leader, you can send the move as a direct call from player!
-    public void sendSTEM_sendHMove(HMove move)
-    {
-        // only lead attacker sends this move
-        SexyTimeEventMessage message = new SexyTimeEventMessage();
-        message.eventId = SexyTimeEventMessage.EVENT_START_H_MOVE;
-        message.move = move;
-        message.senderGO_ID = GO_ID;
-        WickedObserver.SendMessage("onSexyTimeEventMessage:" + move.victim.GO_ID, message);
-    }
-
     public void sendTieUp(int victimGO_ID)
     {
         SexyTimeEventMessage message = new SexyTimeEventMessage();
@@ -302,71 +389,14 @@ public class HentaiSexCoordinator : MonoBehaviour
         WickedObserver.SendMessage("onSexyTimeEventMessage:" + victimGO_ID, message);
     }
 
-    /// <summary>
-    /// Useful for gallery mode, and solo masterbation moves
-    /// </summary>
-    /// <param name="soloMove"></param>
-    public void sendSelfHMove(HMove hMove)
-    {
-
-    }
-
-
-
-
-    /// <summary>
-    /// While this target is being sexed, this will check if another enemy can join in
-    /// </summary>
-    /// <param name="attacker"></param>
-    /// <param name="avaibleParts"></param>
-    /// <returns>Returns -1 if they can not participate otherwise it will return  the id of the attacker</returns>
-    public int canJoinInTheSex(int AttackerGO_ID, string[] avaibleParts)
-    {
-        for (int i = 0; i < currentMove.attackers.Length; i++)
-        {
-            Attacker possibility = currentMove.attackers[i];
-            if (possibility.GO_ID != 0)
-            {
-                continue;
-            }
-            foreach (string part in avaibleParts)
-            {
-                if (part.Equals(possibility.usingPart))
-                {
-                    possibility.GO_ID = AttackerGO_ID;
-                    currentMove.attackers[i].GO_ID = AttackerGO_ID;
-                    return i;
-                }
-            }
-
-        }
-        return -1;
-    }
-
-    private void StartMasterbating(object message)
-    {
-        float duration = (float)message;
-        if (currentMove == null)
-        {
-            WickedObserver.SendMessage("OnPreventEscapeByTime:" + GO_ID, duration);
-            WickedObserver.SendMessage("OnStartMasterbationCallback", true);
-            HMove masterbate = getMasterbationMoveForSelf();
-            masterbate.victim.GO_ID = GO_ID;
-            sendSTEM_sendHMove(masterbate);
-        } else
-        {
-            // fail!
-            WickedObserver.SendMessage("OnStartMasterbationCallback", false);
-        }
-    }
-
     private HMove getMasterbationMoveForSelf()
     {
         if (genderId == GENDER_FEMALE || (genderId == GENDER_FUTA && UnityEngine.Random.Range(0, 1.0f) > 0.5f))
         {
             // female
             return hentaiMoveSystem.getFemaleMasterbation();
-        } else
+        }
+        else
         {
             // male
             return hentaiMoveSystem.getMaleMasterbation();
@@ -398,18 +428,18 @@ public class HentaiSexCoordinator : MonoBehaviour
         {
             availableParts.Add(deviceId);
         }
-        
+
         return availableParts.ToArray();
     }
 
     public static bool isPlayerInvolved(HMove move)
     {
         int ELINA_ID = IAmElina.ELINA.GetInstanceID();
-        if (move == null)
+        if (move == null || move.victim.gameObject == null)
         {
             return false;
         }
-        if (move.victim.GO_ID == ELINA_ID)
+        if (move.victim.gameObject.GetInstanceID() == ELINA_ID)
         {
             return true;
         }
@@ -418,9 +448,13 @@ public class HentaiSexCoordinator : MonoBehaviour
             return false;
         }
 
-        foreach ( Attacker attacker in move.attackers)
+        foreach (Attacker attacker in move.attackers)
         {
-            if (attacker.GO_ID == ELINA_ID)
+            if (attacker.gameObject == null)
+            {
+                continue;
+            }
+            if (attacker.gameObject.GetInstanceID() == ELINA_ID)
             {
                 return true;
             }
@@ -428,4 +462,21 @@ public class HentaiSexCoordinator : MonoBehaviour
         return false;
     }
 
+    public bool IsSexing()
+    {
+        return currentMove != null && currentMove.scenes != null && currentMove.scenes.Length != 0;
+    }
+
+    public bool AmIVictim()
+    {
+        if (currentMove == null)
+        {
+            return false;
+        }
+        if (currentMove.victim.gameObject.GetInstanceID().Equals(gameObject.GetInstanceID()))
+        {
+            return true;
+        }
+        return false;
+    }
 }

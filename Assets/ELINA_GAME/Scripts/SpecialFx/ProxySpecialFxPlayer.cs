@@ -23,7 +23,6 @@ public class ProxySpecialFxPlayer : MonoBehaviour
             SpecialFxRequestBuilder.newBuilder(parsed[0])
                 .setOwner(animationHips, false)
                 .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.HALF_PLAYER_HEIGHT, 0))
-                .setLifespan(float.Parse(parsed[1]))
                 .build().Play();
         }
         

@@ -32,19 +32,6 @@
         WickedObserver.SendMessage("onSexyTimeEventMessage:" + victimGO_ID, message);
     }
 
-    // send the move you are a leader
-    // if you are not a leader, you can send the move as a direct call from player!
-    public void sendEvent_sendHMove(HMove move, int victimGO_ID)
-    {
-        // only lead attacker sends this move
-        SexyTimeEventMessage message = new SexyTimeEventMessage();
-        message.eventId = SexyTimeEventMessage.EVENT_START_H_MOVE;
-        move.victim.GO_ID = victimGO_ID;
-        move.attackers[0].GO_ID = GO_ID; // me, i am attacking
-        message.move = move;
-        message.senderGO_ID = GO_ID;
-        WickedObserver.SendMessage("onSexyTimeEventMessage:" + victimGO_ID, message);
-    }
 
     public void sendEvent_tieUp(int victimGO_ID)
     {

@@ -13,7 +13,6 @@ public class EnemyLogic : MonoBehaviour
     public Vector3 TargetDestination;
     [HideInInspector] public Vector3 MovementDirection;
     CharacterController cc; 
-    RagdollEnabler rd;
     IAstarAI ai;
     [Range(0, 1)] public int EnemyType;
 
@@ -28,9 +27,9 @@ public class EnemyLogic : MonoBehaviour
     [Header("Behavior")]
     public Behavior CurrentBehavior;
     float QueuedDistance = 0;
-    float BehaviorChangeTimerForSex = 0;
-    float BehaviorChangeTimerForStun = 0;
-    float BehaviorChangeTimer = 0;
+    public float BehaviorChangeTimerForSex = 0;
+    public float BehaviorChangeTimerForStun = 0;
+    public float BehaviorChangeTimer = 0;
     // new 
     float CurrentAttackChargeTime = 0;
     float StrafeDirectionTimer = 0;
@@ -66,7 +65,7 @@ public class EnemyLogic : MonoBehaviour
 
     private bool isDefeated;
     private List<System.Guid> disposables = new List<System.Guid>();
-    private EnemyMeleeActionManager enemyMeleeActionManager;
+    private EnemyActionManager enemyActionManager;
     private void OnDestroy()
     {
        WickedObserver.RemoveListener(disposables);
@@ -86,19 +85,18 @@ public class EnemyLogic : MonoBehaviour
         DEBUG_ATTACK_SYMBOL = SpecialFxRequestBuilder.newBuilder("DebugMarker")
                 .setOwner(transform, true)
                 .setOffsetPosition(new Vector3(0, SpecialFxRequestBuilder.PLAYER_HEIGHT, 0))
-                .setLifespan(SpecialFxRequestBuilder.LIFESPAN_FOREVER)
                 .build().Play();
         DEBUG_ATTACK_SYMBOL.SetActive(false);
-        enemyMeleeActionManager = GetComponent<EnemyMeleeActionManager>();
+        enemyActionManager = GetComponent<EnemyActionManager>();
         cc = GetComponent<CharacterController>();
         ai = GetComponent<IAstarAI>();
-        rd = GetComponent<RagdollEnabler>(); // THIS IS NEW
         TargetPlayer = GameObject.FindWithTag("Player");
         PreferredDistance = MaximumDistanceToPlayer / 2;
         SpawnPoint = transform.position;
 
         disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + gameObject.GetInstanceID(), (unused) =>
         {
+            BehaviorChangeTimerForStun = 0;
            if (isDefeated)
                return;
            DisableForDurationBySex(float.MaxValue);
@@ -107,12 +105,12 @@ public class EnemyLogic : MonoBehaviour
         {
            if (isDefeated)
                return;
-           DisableForDurationBySex(0.5f);
+           DisableForDurationBySex(0.1f);
         }));
     }
 
 
-    private void LateUpdate()
+    /*private void LateUpdate()
     {
         // used for debugging
         if (CurrentBehavior == Behavior.MovingToAttack)
@@ -123,7 +121,7 @@ public class EnemyLogic : MonoBehaviour
         {
             DEBUG_ATTACK_SYMBOL.SetActive(false);
         }
-    }
+    }*/
     void Update()
     {
         if (isDefeated)
@@ -137,9 +135,7 @@ public class EnemyLogic : MonoBehaviour
         if (TargetPlayer == null || !cc.enabled)
             return;
 
-        if (rd.state != RagdollEnabler.CurrentState.Enabled || rd.animRagdollFlag)
-            return;
-
+        
         // Update the pathfinding
         UpdatePath();
 
@@ -249,8 +245,8 @@ public class EnemyLogic : MonoBehaviour
             }
         }
 
-        //if (!Attacking && CurrentBehavior != Behavior.MovingToAttack && CurrentBehavior != Behavior.Disabled)
-        //    AvoidOtherEnemies();
+        if (!Attacking && CurrentBehavior != Behavior.MovingToAttack && CurrentBehavior != Behavior.Disabled)
+            AvoidOtherEnemies();
 
         //if (MovingToSpecifiedLocation)
         //{
@@ -262,7 +258,7 @@ public class EnemyLogic : MonoBehaviour
         //}
 
         MovementDirection = MovementDirection.normalized;
-
+            
         if (CurrentBehavior == Behavior.Chasing) CurrentSpeed = Mathf.Lerp(CurrentSpeed, MaxChasingSpeed * MovementDirection.sqrMagnitude, Time.deltaTime * 1f);
         else if (CurrentBehavior == Behavior.MovingToAttack) CurrentSpeed = Mathf.Lerp(CurrentSpeed, MaxRepositioningSpeed * MovementDirection.sqrMagnitude, Time.deltaTime * 1f);
         else if (CurrentBehavior == Behavior.Idling) CurrentSpeed = Mathf.Lerp(CurrentSpeed, 0f * MovementDirection.sqrMagnitude, Time.deltaTime * 1f);
@@ -276,7 +272,7 @@ public class EnemyLogic : MonoBehaviour
         // If we aren't moving via pathfinding move via directional calculations
         if (!MovingToTargetPosition)
         {
-            AvoidLedges();
+            //AvoidLedges();
             cc.Move(MovementDirection * Time.deltaTime);
         }
     }
@@ -396,13 +392,17 @@ public class EnemyLogic : MonoBehaviour
     /// </summary>
     void UpdatePath()
     {
+        if (ai == null)
+        {
+            Debug.LogError("this is bad");
+        }
         ai.destination = TargetDestination;
         ai.SearchPath();
 
         if (MovingToTargetPosition)
         {
             if (CurrentBehavior != Behavior.MovingToAttack)
-            	CurrentBehavior = Behavior.Repositioning;
+                CurrentBehavior = Behavior.Repositioning;
             BehaviorChangeTimer = 1f;
             ai.maxSpeed = CurrentSpeed;
         }
@@ -490,7 +490,7 @@ public class EnemyLogic : MonoBehaviour
             if (!Attacking)
             {
                 // call to the attack
-                float warningTime = enemyMeleeActionManager.StartRandomAttack();
+                float warningTime = enemyActionManager.StartRandomAttack();
                 StartAttack(warningTime);
             }
         }
@@ -514,9 +514,9 @@ public class EnemyLogic : MonoBehaviour
             InAttackRange = true;
 
             if (!Attacking)
-    {
+            {
                 // call to the attack
-                float warningTime = enemyMeleeActionManager.StartRandomAttack();
+                float warningTime = enemyActionManager.StartRandomAttack();
                 StartAttack(warningTime);
             }
         }

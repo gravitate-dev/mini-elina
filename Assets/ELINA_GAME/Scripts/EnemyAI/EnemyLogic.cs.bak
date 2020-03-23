@@ -13,12 +13,13 @@ public class EnemyLogic : MonoBehaviour
     public Vector3 TargetDestination;
     [HideInInspector] public Vector3 MovementDirection;
     CharacterController cc; 
-    RagdollEnabler rd;
+    //RagdollEnabler rd;
     IAstarAI ai;
     [Range(0, 1)] public int EnemyType;
 
     [Header("Speeds")]
-    float CurrentSpeed;
+    //DONT TOUCH currentSpeed;
+    public float CurrentSpeed;
     float Acceleration;
     public float MaxChasingSpeed;
     public float MaxRepositioningSpeed;
@@ -65,7 +66,7 @@ public class EnemyLogic : MonoBehaviour
 
     private bool isDefeated;
     private List<System.Guid> disposables = new List<System.Guid>();
-    private EnemyMeleeActionManager enemyMeleeActionManager;
+    private EnemyActionManager enemyMeleeActionManager;
     private void OnDestroy()
     {
        WickedObserver.RemoveListener(disposables);
@@ -88,11 +89,10 @@ public class EnemyLogic : MonoBehaviour
                 .setLifespan(SpecialFxRequestBuilder.LIFESPAN_FOREVER)
                 .build().Play();
         DEBUG_ATTACK_SYMBOL.SetActive(false);
-        enemyMeleeActionManager = GetComponent<EnemyMeleeActionManager>();
-        
+        enemyMeleeActionManager = GetComponent<EnemyActionManager>();
         cc = GetComponent<CharacterController>();
         ai = GetComponent<IAstarAI>();
-        rd = GetComponent<RagdollEnabler>(); // THIS IS NEW
+        //rd = GetComponent<RagdollEnabler>(); // THIS IS NEW
         TargetPlayer = GameObject.FindWithTag("Player");
         PreferredDistance = MaximumDistanceToPlayer / 2;
         SpawnPoint = transform.position;
@@ -111,6 +111,7 @@ public class EnemyLogic : MonoBehaviour
         }));
     }
 
+
     private void LateUpdate()
     {
         // used for debugging
@@ -123,7 +124,6 @@ public class EnemyLogic : MonoBehaviour
             DEBUG_ATTACK_SYMBOL.SetActive(false);
         }
     }
-
     void Update()
     {
         if (isDefeated)
@@ -137,8 +137,8 @@ public class EnemyLogic : MonoBehaviour
         if (TargetPlayer == null || !cc.enabled)
             return;
 
-        if (rd.state != RagdollEnabler.CurrentState.Enabled || rd.animRagdollFlag)
-            return;
+        /*if (rd.state != RagdollEnabler.CurrentState.Enabled || rd.animRagdollFlag)
+            return;*/
 
         // Update the pathfinding
         UpdatePath();
@@ -401,7 +401,8 @@ public class EnemyLogic : MonoBehaviour
 
         if (MovingToTargetPosition)
         {
-            CurrentBehavior = Behavior.Repositioning;
+            if (CurrentBehavior != Behavior.MovingToAttack)
+            	CurrentBehavior = Behavior.Repositioning;
             BehaviorChangeTimer = 1f;
             ai.maxSpeed = CurrentSpeed;
         }
@@ -455,10 +456,12 @@ public class EnemyLogic : MonoBehaviour
     /// <param name="AttackDuration">Duration of the attack animation</param>
     public void StartAttack(float AttackDuration)
     {
+        CurrentAttackChargeTime = AttackDuration;
         BehaviorChangeTimer = AttackDuration;
         Attacking = true;
     }
 
+    // todo set the time to attack
     public void SetAttackDistance(float Distance)
     {
         AttackDistance = Distance;
@@ -466,6 +469,7 @@ public class EnemyLogic : MonoBehaviour
         BehaviorChangeTimer = 3; // 3 seconds to move into position
     }
 
+    // original style GREAT FOR RANGE ATTACKS!
     /// <summary>
     /// Moves to the current attack range for the enemy with slight buffer to avoid jitter
     /// </summary>

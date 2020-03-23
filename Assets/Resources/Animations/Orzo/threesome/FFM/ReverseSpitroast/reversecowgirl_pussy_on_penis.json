@@ -1,0 +1,42 @@
+[
+  {
+    "moveName": "Reverse Spitroast",
+    "interruptable":"false",
+    "dynamicBoneDisable":false,
+    "victim": {
+      "reqParts": [
+        "penis"
+      ]
+    },
+    "attackers":[
+      {
+        "usingPart":"pussy",
+        "targetPart":"penis"
+      },
+      {
+        "usingPart":"pussy",
+        "targetPart":"mouth"
+      }
+    ],
+    "scenes": [
+      {
+        "minHeatLimit":0,
+        "maxHeatLimit":70,
+        "victimAnimationId": "023 Reverse Spitroast (guy)",
+        "attackerAnimationIds":["023 Reverse Spitroast (girl1)","023 Reverse Spitroast (girl2)"]
+      },
+      {
+        "minHeatLimit":70,
+        "victimAnimationId": "023 Reverse Spitroast (guy) L2",
+        "attackerAnimationIds":["023 Reverse Spitroast (girl1) L2","023 Reverse Spitroast (girl2) L2"]
+      },
+      {
+        "isOrgasm":true,
+        "oneShot":true,
+        "heatRate":0.1,
+        "victimAnimationId": "023 Reverse Spitroast orgasm (guy)",
+        "attackerAnimationIds":["023 Reverse Spitroast orgasm (girl1)", "023 Reverse Spitroast orgasm (girl2)"]
+      }
+    ]
+  }, 
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "moveName": "Pussy Lick Laying",
+    "interruptable":"false",
+    "victim": {
+      "reqParts": [
+        "pussy"
+      ]
+    },
+    "attackers":[
+      {
+        "usingPart":"mouth",
+        "targetPart":"pussy"
+      }
+    ],
+    "scenes": [
+      {
+        "maxHeatLimit":60,
+        "victimAnimationId": "PussyLickFloorGirl",
+        "attackerAnimationIds":["PussyLickFloorGuy"]
+      },
+      {
+        "minHeatLimit":60,
+        "victimAnimationId": "PussyLickFloorGirl_Intense",
+        "attackerAnimationIds":["PussyLickFloorGuy_Intense"]
+      },
+    ]
+  }
+]

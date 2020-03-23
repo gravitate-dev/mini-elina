@@ -116,7 +116,7 @@ public class EnemyQueueHandler : MonoBehaviour
                 }
             }
 
-            float HOOK_YOUR_DISTANCE_HERE = 1;
+            float HOOK_YOUR_DISTANCE_HERE = 1f;
 
             // All enemies in the queue should be valid, and the queue size is equal to the
             // attacker group size. So we make all enemies in the queue attack at once

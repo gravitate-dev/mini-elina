@@ -8,15 +8,12 @@ public class SpecialFxRequestBuilder
     public const float PLAYER_HEIGHT = 2.0f;
     public const float HALF_PLAYER_HEIGHT = 1.0f;
 
-    public const float LIFESPAN_FOREVER = -1.0f;
-
     private string effectName;
     private Transform owner;
     private bool parentToOwner;
     private Vector3 offsetRotation;
     private bool hasOffsetRotation;
     private Vector3 offsetPosition;
-    private float lifespan;
 
 
 
@@ -28,7 +25,6 @@ public class SpecialFxRequestBuilder
         public bool hasOffsetRotation;
         public Vector3 offsetRotation;
         public Vector3 offsetPosition;
-        public float lifespan;
         public bool parentToOwner;
 
         public GameObject Play()
@@ -47,7 +43,6 @@ public class SpecialFxRequestBuilder
             request.offsetRotation = offsetRotation;
         }
         request.hasOffsetRotation = hasOffsetRotation;
-        request.lifespan = lifespan;
         request.effectName = effectName;
         request.parentToOwner = parentToOwner;
         hasOffsetRotation = false;
@@ -70,12 +65,6 @@ public class SpecialFxRequestBuilder
     public SpecialFxRequestBuilder setOffsetPosition(Vector3 position)
     {
         offsetPosition = position;
-        return this;
-    }
-
-    public SpecialFxRequestBuilder setLifespan(float lifespan)
-    {
-        this.lifespan = lifespan;
         return this;
     }
 

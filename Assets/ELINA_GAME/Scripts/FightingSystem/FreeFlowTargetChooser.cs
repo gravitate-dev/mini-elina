@@ -81,7 +81,7 @@ public class FreeFlowTargetChooser : MonoBehaviour
         List<Transform> targets = new List<Transform>();
         foreach (Collider collider in Physics.OverlapSphere(transform.position, MAX_TARGET_DISTANCE))
         {
-            EnemyMeleeActionManager enemyMeleeActionManager = collider.gameObject.GetComponent<EnemyMeleeActionManager>();
+            EnemyActionManager enemyMeleeActionManager = collider.gameObject.GetComponent<EnemyActionManager>();
             FreeFlowTargetable freeFlowTargetable = collider.gameObject.GetComponent<FreeFlowTargetable>();
             if (enemyMeleeActionManager == null || collider.gameObject == this.gameObject)
             {

@@ -5,11 +5,11 @@ using UnityEngine;
 public class SexableBlendshapeClothing : MonoBehaviour
 {
     public bool takeOffDuringSex;
-    [InfoBox("ass,flat,foot,hand,mouth,penis,stomach")]
+    [InfoBox("ass,boobs,flat,foot,hand,mouth,penis,stomach")]
     public string clothingTarget;
-    [InfoBox("During sex this blendshape is turned to 100")]
-    public string blendshapeName;
+    public string blendshapeName; // during sex this is turned to 100
     private SkinnedMeshRenderer skinnedMeshRenderer;
+    private HentaiSexCoordinator hentaiSexCoordinator;
     private int GO_ID;
     private List<System.Guid> disposables = new List<System.Guid>();
     void Start()
@@ -34,6 +34,12 @@ public class SexableBlendshapeClothing : MonoBehaviour
 
         }
         skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
+
+        hentaiSexCoordinator = GetComponentInParent<HentaiSexCoordinator>();
+        if (hentaiSexCoordinator != null)
+        {
+            UpdateVisibility(hentaiSexCoordinator.AmIVictim());
+        }
         disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, onStartHentaiMove));
         disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + GO_ID, onCoordinatorStopMove));
     }
@@ -49,18 +55,9 @@ public class SexableBlendshapeClothing : MonoBehaviour
             return;
         }
         HMove hmove = (HMove)message;
-        if (hmove.victim.GO_ID != GO_ID)
+        if (hentaiSexCoordinator != null)
         {
-            return;
-        }
-
-        if (takeOffDuringSex)
-        {
-            skinnedMeshRenderer.enabled = false;
-        } else if (hmove.dynamicBoneDisable)
-        {
-            int idx = skinnedMeshRenderer.sharedMesh.GetBlendShapeIndex(blendshapeName);
-            skinnedMeshRenderer.SetBlendShapeWeight(idx, 100);
+            UpdateVisibility(hentaiSexCoordinator.AmIVictim());
         }
     }
 
@@ -72,5 +69,22 @@ public class SexableBlendshapeClothing : MonoBehaviour
         }
         int idx = skinnedMeshRenderer.sharedMesh.GetBlendShapeIndex(blendshapeName);
         skinnedMeshRenderer.SetBlendShapeWeight(idx, 0);
+    }
+
+    private void UpdateVisibility(bool isSexVictim)
+    {
+        if (isSexVictim == false) {
+            return;
+        }
+
+        if (takeOffDuringSex)
+        {
+            skinnedMeshRenderer.enabled = false;
+        }
+        else
+        {
+            int idx = skinnedMeshRenderer.sharedMesh.GetBlendShapeIndex(blendshapeName);
+            skinnedMeshRenderer.SetBlendShapeWeight(idx, 100);
+        }
     }
 }

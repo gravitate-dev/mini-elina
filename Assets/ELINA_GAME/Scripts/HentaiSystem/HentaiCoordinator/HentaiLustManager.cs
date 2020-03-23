@@ -1,5 +1,4 @@
-﻿using Sirenix.OdinInspector;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -11,8 +10,6 @@ public class HentaiLustManager : MonoBehaviour
     // 0 to 100f lust levels
     // at 50.0f lust level character is not controllable and starts masterbating until lust is at 25.0f, during masterbation lust cant go up
 
-    /*[Required]
-    public Progressor progressor;*/
     public float lustLevel = 0;
     public float lustMax = 100.0f;
     public float decreaseLustRate = 10.0f;
@@ -62,6 +59,7 @@ public class HentaiLustManager : MonoBehaviour
         {
             lustLevel = Mathf.Max(0, lustLevel - decreaseLustRate);
         }
+
         /*if (progressor != null)
         {
             progressor.SetProgress(lustLevel/100.0f);

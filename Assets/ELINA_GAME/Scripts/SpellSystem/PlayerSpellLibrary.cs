@@ -12,22 +12,22 @@ public class PlayerSpellLibrary : MonoBehaviour
         public int SPELL_NUMBER;
         public float cooldown;
         public KeyCode hotkey;
-        //public ButtonCooldown buttonCooldown;
+        public ButtonCooldown buttonCooldown;
         public bool isOnCooldown()
         {
-            return false;
+            return buttonCooldown.IsOnCooldown();
         }
-        public Spell(int SPELL_NUMBER, string name, float cooldown, KeyCode hotkey)
+        public Spell(int SPELL_NUMBER, string name, float cooldown, KeyCode hotkey, ButtonCooldown buttonCooldown)
         {
             this.SPELL_NUMBER = SPELL_NUMBER;
             this.name = name;
             this.cooldown = cooldown;
             this.hotkey = hotkey;
-            //this.buttonCooldown = buttonCooldown;
+            this.buttonCooldown = buttonCooldown;
         }
     }
-    //[Required]
-    //public ButtonCooldown summonSuccubusButton;
+    [Required]
+    public ButtonCooldown summonSuccubusButton;
     private List<Spell> spells = new List<Spell>();
     private void Awake()
     {
@@ -50,7 +50,7 @@ public class PlayerSpellLibrary : MonoBehaviour
 
     public void OnCastSpell(Spell spell)
     {
-        //spell.buttonCooldown.BeginCooldown(spell.cooldown);
+        spell.buttonCooldown.BeginCooldown(spell.cooldown);
     }
 
     private bool isSummonSuccubusUnlocked()
@@ -60,7 +60,7 @@ public class PlayerSpellLibrary : MonoBehaviour
 
     private Spell getSummonSuccubusSpell()
     {
-        return new Spell(SPELL_SUMMON_SEX_SUCCUBUS, "Summon Succubus", 2.5f, KeyCode.Q);
+        return new Spell(SPELL_SUMMON_SEX_SUCCUBUS, "Summon Succubus", 2.5f, KeyCode.Q, summonSuccubusButton);
     }
 
 }

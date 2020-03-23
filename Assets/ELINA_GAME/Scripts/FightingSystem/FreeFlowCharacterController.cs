@@ -10,14 +10,14 @@ using static PlayerSpellLibrary;
 /// </summary>
 public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 {
-    public GameObject SUCCUBUS_SEX_CLONE_PREFAB;
 
     private PlayerSpellLibrary playerSpellLibrary;
     private FreeFlowGapCloser freeFlowGapCloser;
     private FreeFlowMovePicker freeFlowMovePicker;
     private FreeFlowTargetChooser freeFlowEnemyPicker;
     private FreeFlowAnimatorController freeFlowAnimatorController;
-    private vShooterMeleeInput shooterMeleeInput;
+    private HentaiSexCoordinator hentaiSexCoordinator;
+    private vThirdPersonInput invectorControllerInput;
     private Animator animator;
     private int GO_ID;
     private Queue<FreeFlowAttackMove> actionQueue = new Queue<FreeFlowAttackMove>();
@@ -56,9 +56,10 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     private void Awake()
     {
         GO_ID = gameObject.GetInstanceID();
+        hentaiSexCoordinator = GetComponent<HentaiSexCoordinator>();
         playerSpellLibrary = GetComponent<PlayerSpellLibrary>();
         freeFlowAnimatorController = GetComponent<FreeFlowAnimatorController>();
-        shooterMeleeInput = GetComponent<vShooterMeleeInput>();
+        invectorControllerInput = GetComponent<vThirdPersonInput>();
         freeFlowMovePicker = FindObjectOfType<FreeFlowMovePicker>();
         animator = GetComponent<Animator>();
         glideController = GetComponent<GlideController>();
@@ -81,7 +82,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             HMove currentMove = new HMove((HMove)obj); // update loop for hentai moves
             canBeSexed = false;
             canBeAttacked = false;
-            shooterMeleeInput.jumpInput.useInput = false;
+            invectorControllerInput.jumpInput.useInput = false;
             glideController.enabled = false;
             CancelInvoke();
         }));
@@ -105,7 +106,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     private void Start()
     {
-        //spells = playerSpellLibrary.GetSpells();
+        spells = playerSpellLibrary.GetSpells();
     }
 
     private void OnDestroy()
@@ -123,11 +124,11 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             nextAction = ACTION_NULL;
         }
         if (DisableActionsTime > 0 || DisableActionsVictimHitAnimationTime > 0)
-            {
+        {
             DisableActionsVictimHitAnimationTime -= Time.deltaTime;
             DisableActionsTime -= Time.deltaTime;
             return;
-            }
+        }
         if (nextAction == ACTION_NULL || actionQueue.Count > 0)
         {
             // if i am busy or doing nothing return
@@ -137,7 +138,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         {
             Attack();
         } else if (nextAction == ACTION_COUNTER)
-            {
+        {
             Counter();
         } else if (nextAction == ACTION_MAGIC_SPELL)
         {
@@ -147,7 +148,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             Evade();
         }
         nextAction = 0;
-        }
+    }
     #region == Capture Input ==
     private void CapturePlayersInput()
     {
@@ -192,7 +193,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 # endregion
     private void Attack()
     {
-        
+        UnlockPlayerInput("FreeFlowCharacterController");  // fix for a glitch where we get stuck
         GameObject target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_ATTACK);
         if (target == null)
         {
@@ -204,6 +205,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         {
             return;
         }
+        WickedObserver.SendMessage("PlayerAttacked"); /// used by <see cref="MusicController"/>
         LockPlayerInput("FreeFlowCharacterController");
         attackMove.victimGO_ID = target.gameObject.GetInstanceID();
         attackMove.attacker = gameObject;
@@ -216,17 +218,19 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     private void Counter()
     {
+        UnlockPlayerInput("FreeFlowCharacterController"); // fix for a glitch where we get stuck
         GameObject target = freeFlowEnemyPicker.getTarget(FreeFlowTargetChooser.TARGET_REASON_COUNTER);
         if (target == null)
         {
             return;
         }
-
-        EnemyMeleeActionManager ticketHolder =  target.gameObject.GetComponent<EnemyMeleeActionManager>();
+        
+        EnemyActionManager ticketHolder =  target.gameObject.GetComponent<EnemyActionManager>();
         if (ticketHolder == null)
         {
             return;
         }
+        WickedObserver.SendMessage("PlayerAttacked"); /// used by <see cref="MusicController"/>
         LockPlayerInput("FreeFlowCharacterController");
         ticketHolder.CancelAttack();
 
@@ -259,14 +263,15 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         }
         playerSpellLibrary.OnCastSpell(spell);
 
-        GameObject newSuccubus = Instantiate(SUCCUBUS_SEX_CLONE_PREFAB);
-        Vector3 pos = transform.position + transform.forward; // spawn demon in front
-        newSuccubus.transform.position = pos;
-        pos.y = transform.position.y + 0.5f;
+        GameObject newSuccubus = SpecialFxRequestBuilder.newBuilder("MasterSexSuccubusClone")
+                .setOwner(transform, false)
+                .setOffsetPosition(new Vector3(0, 0.5f, 0) + transform.forward)
+                .setOffsetRotation(new Vector3(0, 0, 0))
+                .build().Play();
         newSuccubus.transform.rotation = transform.rotation;
-        /*SexShadowClone sexShadowClone = newSuccubus.GetComponent<SexShadowClone>();
+        SexShadowClone sexShadowClone = newSuccubus.GetComponent<SexShadowClone>();
         sexShadowClone.SetTarget(target);
-        sexShadowClone.MoveThenSex();*/
+        sexShadowClone.MoveThenSex();
     }
 
     private void Evade()
@@ -364,7 +369,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     private void AllowJump()
     {
-        shooterMeleeInput.jumpInput.useInput = true;
+        invectorControllerInput.jumpInput.useInput = true;
     }
     public int TakePhysicalHit()
     {
@@ -375,17 +380,29 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     #endregion
 
     public void LockPlayerInput(string reason)
-        {
+    {
         lockInputReasons.Add(reason);
-        shooterMeleeInput.SetLockAllInput(true);
-        }
+        invectorControllerInput.SetLockAllInput(true);
+    }
 
     public void UnlockPlayerInput(string reason)
     {
         lockInputReasons.Remove(reason);
         if (lockInputReasons.Count == 0)
         {
-            shooterMeleeInput.SetLockAllInput(false);
+            invectorControllerInput.SetLockAllInput(false);
         }
     }
+
+    #region === What Attacks can Take ===
+    public bool isTargetSexable()
+    {
+        return true;
+    }
+
+    public bool isTargetAttackable()
+    {
+        return hentaiSexCoordinator.IsSexing() == false;
+    }
+    #endregion
 }

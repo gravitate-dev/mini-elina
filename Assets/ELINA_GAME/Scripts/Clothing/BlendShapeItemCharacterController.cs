@@ -17,10 +17,10 @@ public class BlendShapeItemCharacterController : MonoBehaviour
     [Required]
     public string highHeelBlendshapeName;
     private vThirdPersonController thirdPersonController;
-    private CapsuleCollider capsuleCollider;
+    private CharacterController characterController;
     private SkinnedMeshRenderer skinnedMeshRenderer;
     private int GO_ID;
-    private float currentHeelHeight;
+    public float currentHeelHeight; ///<see cref="HentaiSexCoordinator.cs/>
     private DynamicBone[] dynamicBones;
 
     private float standingHeight;
@@ -31,11 +31,17 @@ public class BlendShapeItemCharacterController : MonoBehaviour
         dynamicBones = GetComponents<DynamicBone>();
 
         skinnedMeshRenderer = findElinaSkin();
+        characterController = GetComponent<CharacterController>();
         thirdPersonController = GetComponent<vThirdPersonController>();
-        capsuleCollider = GetComponent<CapsuleCollider>();
+        CapsuleCollider capsuleCollider = GetComponent<CapsuleCollider>();
         if (capsuleCollider != null)
         {
+            // for player
             standingHeight = capsuleCollider.height;
+        } else if (characterController != null)
+        {
+            // for enemies
+            standingHeight = characterController.height;
         }
         HentaiSexCoordinator hentaiSexCoodinator = GetComponentInParent<HentaiSexCoordinator>();
         if (hentaiSexCoodinator != null)
@@ -82,7 +88,12 @@ public class BlendShapeItemCharacterController : MonoBehaviour
         currentHeelHeight = newHeight;
         if (thirdPersonController != null)
         {
+            // for player
             thirdPersonController.colliderHeight = standingHeight + currentHeelHeight;
+        } else if (characterController != null)
+        {
+            // for enemy
+            characterController.height = standingHeight + currentHeelHeight;
         }
         WickedObserver.SendMessage("OnHighHeelEquipped:" + GO_ID, heelBlendshape); 
         SetBlendshape(highHeelBlendshapeName, heelBlendshape);
@@ -93,7 +104,12 @@ public class BlendShapeItemCharacterController : MonoBehaviour
         currentHeelHeight = 0;
         if (thirdPersonController != null)
         {
+            // for player
             thirdPersonController.colliderHeight = standingHeight;
+        } else if (characterController != null)
+        {
+            // for enemy
+            characterController.height = standingHeight;
         }
         WickedObserver.SendMessage("OnHighHeelRemoved:" + GO_ID);
         SetBlendshape(highHeelBlendshapeName, 0);

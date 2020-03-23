@@ -7,7 +7,7 @@ public class HentaiMoveSystem : MonoBehaviour
 {
 
     public static HentaiMoveSystem INSTANCE;
-    private string basePath = "Assets\\Resources\\HMoves\\";
+    private string basePath = "Assets\\Resources\\Animations\\";
     public List<HMove> hMoves = new List<HMove>();
     void Awake()
     {

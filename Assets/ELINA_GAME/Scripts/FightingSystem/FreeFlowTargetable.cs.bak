@@ -11,6 +11,12 @@ using UnityEngine;
 public class FreeFlowTargetable : MonoBehaviour
 {
 
+    public const int HIT_RESULT_NORMAL = 0;
+    public const int HIT_RESULT_RAGDOLL = 1;
+    public const int HIT_RESULT_STUN = 2;
+    public const int HIT_RESULT_DEFEAT = 5;
+
+
     public const float SEX_TIME = 7.0f;
     public const float KNOCKDOWN_TIME = 2.7f;
     private const int FREE_STUN_HITS_ALLOWED = 3;
@@ -19,15 +25,16 @@ public class FreeFlowTargetable : MonoBehaviour
     public int stuff;
 
     [BoxGroup("Defense Stats")]
-    public int hitsForKnockDown = 8;
+    public int hitsForDefeat = 10;
     [BoxGroup("Defense Stats")]
-    public int knockDownsToDefeat = 2;
-
+    public int sexToHitsFactor = 3;
+    [BoxGroup("Defense Stats")]
+    public int hitsToStun = 8;
 
     [BoxGroup("Stun Settings")]
     public int stunTimeFreeHitsAllowed = 2;
     [BoxGroup("Stun Settings")]
-    public float enemyStunTime = 5.0f;
+    public float enemyStunTime = 3.0f;
 
     private int stunFreeHitsLeft = 3;
     
@@ -36,28 +43,26 @@ public class FreeFlowTargetable : MonoBehaviour
     private int currentHits;
     [SerializeField]
     [HideInEditorMode]
+    private int currentHitsToStunCountdown;
+    [SerializeField]
+    [HideInEditorMode]
     private int currentKnockDowns;
 
     private bool defeated = false;
-
-
-    
-    public bool targetCanBeAttacked;
     [HideInEditorMode]
     public bool isSexing;
-    [HideInEditorMode]
-    public bool targetableCounter;
-    [HideInEditorMode]
-    public bool isChargingAttack;
     [SerializeField]
     [HideInEditorMode]
     private bool targetableSex;
 
     private int GO_ID;
+    //private RagdollEnabler ragdollEnabler;
     private HentaiSexCoordinator hentaiSexCoordinator;
     private EnemyLogic enemyLogic;
     private HybridAnimancerComponent animancer;
     private List<System.Guid> disposables = new List<System.Guid>();
+    private float DisableAttackbleTime;
+    private float TargetSexableTime;
     
     
 
@@ -65,13 +70,20 @@ public class FreeFlowTargetable : MonoBehaviour
     void Start()
     {
         GO_ID = gameObject.GetInstanceID();
+        //ragdollEnabler = GetComponent<RagdollEnabler>();
         animancer = GetComponent<HybridAnimancerComponent>();
         enemyLogic = GetComponent<EnemyLogic>();
         hentaiSexCoordinator = GetComponent<HentaiSexCoordinator>();
-        disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + GO_ID, (u)=>
+        currentHitsToStunCountdown = hitsToStun;
+        disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_STOP_H_MOVE_LOCAL + GO_ID, (move)=>
         {
+            HMove temp = (HMove)move;
             isSexing = false;
+            if (temp.victim.GO_ID == GO_ID)
+            {
+                // take damage if i am being sexed
             sexHit();
+            }
         }));
         // to know while i am being sexed
         disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj)=>
@@ -91,8 +103,25 @@ public class FreeFlowTargetable : MonoBehaviour
             Invoke("endSex", SEX_TIME);
             
         }));
+
+        disposables.Add(WickedObserver.AddListener("OnFreeFlowAnimationFinish:" + GO_ID, (unused) =>
+        {
+            // reboot an enemy after an attack
+            enemyLogic.DisableForDuration(0f);
+        }));
     }
 
+    private void Update()
+    {
+        if (DisableAttackbleTime >= 0)
+        {
+            DisableAttackbleTime -= Time.deltaTime;
+        }
+        if (TargetSexableTime >= 0)
+        {
+            TargetSexableTime -= Time.deltaTime;
+        }
+    }
     private void OnDestroy()
     {
         WickedObserver.RemoveListener(disposables);
@@ -104,17 +133,18 @@ public class FreeFlowTargetable : MonoBehaviour
             return;
         }
         isSexing = false;
-        targetCanBeAttacked = true;
+        EnableSexable(0);
+        DisableAttackble(0);
         targetableSex = false;
-        hentaiSexCoordinator.stopAllSex();
+        //hentaiSexCoordinator.stopAllSexIfAny();
     }
     
     public bool isTargetSexable()
     {
-        return targetableSex && !isSexing;
+        return TargetSexableTime > 0 && !isSexing;
     }
 
-    public void startFreeFlowAttack(FreeFlowAttackMove freeFlowAttackMove)
+    public void VictimHitRoutines(FreeFlowAttackMove freeFlowAttackMove)
     {
         FreeFlowAttackMove attack = new FreeFlowAttackMove(freeFlowAttackMove);
         if (attack.victim.gameObject.GetInstanceID() == GO_ID)
@@ -125,28 +155,17 @@ public class FreeFlowTargetable : MonoBehaviour
     }
     private IEnumerator onHitRoutines(FreeFlowAttackMove move)
     {
-        //Get force info prior to delay
-        Vector3 force = transform.position - move.attacker.transform.position;
-        //Get only x, z dir with mag of 1k
-        force.y = 0;
-        force = force.normalized * 1;
         //Wait for attack anim to play
         // disable their attack
         enemyLogic.RestartMovement();
         enemyLogic.DisableForDuration(move.victimAnimationDelay + 0.2f);
         yield return new WaitForSeconds(move.victimAnimationDelay);
-
-        // knock back
-        enemyLogic.Knockback(new Vector3(0, 0, -3), 0.5f, true);
+        //ragdollEnabler.DebugShowOff();
 
         // normal stun hit time
         if (move.victimReactionId == HIT_RESULT_STUN)
         {
             stun();
-        }
-        else if (move.victimReactionId == HIT_RESULT_KNOCKDOWN)
-        {
-            knockdown();
         }
         else if (move.victimReactionId == HIT_RESULT_DEFEAT)
         {
@@ -157,15 +176,10 @@ public class FreeFlowTargetable : MonoBehaviour
         }
     }
 
-    public const int HIT_RESULT_NORMAL = 0;
-    public const int HIT_RESULT_KNOCKDOWN = 1;
-    public const int HIT_RESULT_STUN = 2;
-    public const int HIT_RESULT_DEFEAT = 3;
-    
     public void sexHit()
     {
-        currentKnockDowns++;
-        if (currentKnockDowns >= knockDownsToDefeat)
+        currentHits += sexToHitsFactor;
+        if (currentHits + 1 >= hitsForDefeat)
         {
             SetToDefeated();
         }
@@ -173,26 +187,25 @@ public class FreeFlowTargetable : MonoBehaviour
 
     private void SetToDefeated()
     {
-        targetCanBeAttacked = false;
         targetableSex = false;
         enemyLogic.Defeat();
         /*DecisionProvider decisionProvider = GetComponent<DecisionProvider>();
         if (decisionProvider != null)
         {
             decisionProvider.defeated = true;
-        }
+        }*/
         defeated = true;
 
         AnimancerState state = animancer.Play(AnimationClipHandler.INSTANCE.ClipByName("AnimeDeath_FallForward"));
         state.Events.OnEnd = () =>
         {
             Destroy(gameObject, 0.4f);
-        };*/
+        };
         
     }
     public int hit()
     {
-        /*if (enemyLogic.isStunned())
+        if (enemyLogic.isStunned())
         {
             stunFreeHitsLeft--;
             if (stunFreeHitsLeft <= 0)
@@ -200,78 +213,49 @@ public class FreeFlowTargetable : MonoBehaviour
                 enemyLogic.DisableForDurationByStun(0);
                 WickedObserver.SendMessage("onStunEndFreePunches:" + GO_ID);
             }
-        }*/
+        }
         currentHits++;
-        if (currentHits >= hitsForKnockDown)
-        {
-            if (currentKnockDowns + 1 >= knockDownsToDefeat)
+        if (currentHits + 1 >= hitsForDefeat)
             {
-                // defeat by stun
                 return HIT_RESULT_DEFEAT;
             }
-            return HIT_RESULT_KNOCKDOWN;
+        currentHitsToStunCountdown--;
+        if (currentHitsToStunCountdown <= 0)
+        {
+            currentHitsToStunCountdown = hitsToStun;
+            return HIT_RESULT_STUN;
         }
         return HIT_RESULT_NORMAL;
     }
 
     public bool isTargetableForAttack()
     {
-        return targetCanBeAttacked && !isSexing;
-    }
-
-    public bool isTargetableForCounter()
-    {
-        return enemyLogic.Attacking;
-    }
-
-    private void knockdown()
-    {
-        currentHits = 0;
-        currentKnockDowns++;
-        disableTargetable(KNOCKDOWN_TIME);
-        enemyLogic.DisableForDuration(KNOCKDOWN_TIME);
+        return DisableAttackbleTime < 0;
     }
 
     private void stun()
     {
         stunFreeHitsLeft = FREE_STUN_HITS_ALLOWED;
-        enableSexable(FreeFlowReactionHandler.DIZZY_STUN_TIME);
-        //enemyLogic.DisableForDurationByStun(FreeFlowReactionHandler.DIZZY_STUN_TIME);
+        EnableSexable(enemyStunTime);
+        enemyLogic.DisableForDurationByStun(enemyStunTime);
     }
 
     public int getCurrentHp()
     {
-        int damageTaken = (currentKnockDowns * hitsForKnockDown) + currentHits;
-        return Mathf.Max(0,getMaxHp() - damageTaken);
+        return Mathf.Max(0,getMaxHp() + currentHits);
     }
 
     public int getMaxHp()
     {
-        return knockDownsToDefeat * hitsForKnockDown;
+        return hitsForDefeat;
     }
 
-    private void disableTargetable(float duration)
-    {
-        SuperInvoke.Kill("PhysicalTargetable:"+GO_ID);
-        SuperInvoke.Run(() =>
+    private void DisableAttackble(float duration)
         {
-            targetCanBeAttacked = true;
-        }, duration, "PhysicalTargetable:" + GO_ID);
-        targetCanBeAttacked = false;
+        DisableAttackbleTime = duration;
     }
-    private void enableSexable(float duration)
+    private void EnableSexable(float duration)
     {
-        SuperInvoke.Kill("SexualTargetable:"+ GO_ID);
-        SuperInvoke.Run(() => {
-            targetableSex = false;
-        }, duration, "SexualTargetable:" + GO_ID);
-        Invoke("disableSexable", duration);
-        targetableSex = true;
-    }
-
-    public void disableSexable()
-    {
-        SuperInvoke.Kill("SexualTargetable:" + GO_ID);
-        targetableSex = false;
+        TargetSexableTime = duration;
     }
 }
