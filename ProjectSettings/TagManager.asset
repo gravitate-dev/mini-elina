@@ -30,8 +30,6 @@ TagManager:
   - CoverPoint
   - Interactable
   - AIAction
-  - Additional
-  - SexDummy
   layers:
   - Default
   - TransparentFX
