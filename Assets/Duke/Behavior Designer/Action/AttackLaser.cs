@@ -26,7 +26,7 @@ namespace AI {
 
             if(Time.time - _aimTimer > AimTime.Value) {//fire
                 Debug.DrawLine(transform.position + Vector3.up, devTargetGameobject.Value.transform.position + Vector3.up, Color.green, 1f);
-                Debug.LogWarning("Fire");
+                //Debug.LogWarning("Fire");
                 _aimTimer = Time.time;
                 _devAimDrawTimer = Time.time;
                 return TaskStatus.Success;
@@ -35,7 +35,7 @@ namespace AI {
                 if(Time.time - _devAimDrawTimer > 1f) {
                     _devAimDrawTimer = Time.time;
                     Debug.DrawLine(transform.position + Vector3.up, devTargetGameobject.Value.transform.position + Vector3.up, Color.red, 0.5f);
-                    Debug.LogWarning("Aim");
+                    //Debug.LogWarning("Aim");
                 }
                 return TaskStatus.Failure;
             }

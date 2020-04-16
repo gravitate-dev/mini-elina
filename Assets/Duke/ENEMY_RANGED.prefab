@@ -1511,6 +1511,7 @@ GameObject:
   - component: {fileID: 3648492216677980159}
   - component: {fileID: 6496416986115088105}
   - component: {fileID: 6610690439626506756}
+  - component: {fileID: 9216621166563928803}
   - component: {fileID: 7782059744494806026}
   m_Layer: 9
   m_Name: ENEMY_RANGED
@@ -1915,6 +1916,20 @@ MonoBehaviour:
   sexClothes: []
   hair: {fileID: 2916597873090336211, guid: cb862f8cfdf0e3c4aa658a12d97f21b0, type: 3}
   head: {fileID: 3929695016637389145}
+--- !u!114 &9216621166563928803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3929695017270729590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08aea404162d10c4ea4abd9b00402755, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _ai: {fileID: 3929695017270729586}
+  _enemyLogic: {fileID: 3929695017270729584}
 --- !u!114 &7782059744494806026
 MonoBehaviour:
   m_ObjectHideFlags: 0
