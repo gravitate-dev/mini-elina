@@ -1,18 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using BehaviorDesigner.Runtime;
+using BehaviorDesigner.Runtime.Tasks;
 using UnityEngine;
 
-public class AttackFlameThrower : MonoBehaviour
-{
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+namespace AI {
+    [TaskCategory("AI")]
+    [TaskDescription("Attack with flamethrower.")]
+    public class AttackFlameThrower : Action {
+        //dev
+        public SharedGameObject devGameobject;
+        public override TaskStatus OnUpdate() {
+            Debug.DrawLine(transform.position + Vector3.up, devGameobject.Value.transform.position + Vector3.up, Color.red, 1f);
+            return TaskStatus.Success;
+        }
     }
 }

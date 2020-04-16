@@ -3,7 +3,7 @@ using BehaviorDesigner.Runtime.Tasks;
 using UnityEngine;
 
 namespace AI {
-    [TaskCategory("AStarPathfindingProject")]
+    [TaskCategory("AI/Movement")]
     [TaskDescription("Get a position near target position.")]
     public class GetPosNearTarget : Action {
         public SharedVector3 TargetPos;
