@@ -12,7 +12,7 @@ public class EnemyAnimationControllerSetup : MonoBehaviour {
         if (_ai == null || _enemyLogic == null)
             return;
         Vector3 dir = Vector3.zero;
-        if (!_ai.reachedDestination) {
+        if (!_ai.reachedDestination && !_ai.isStopped) {
             dir = _ai.steeringTarget - transform.position;
         }
         _enemyLogic.MovementDirection = dir;
