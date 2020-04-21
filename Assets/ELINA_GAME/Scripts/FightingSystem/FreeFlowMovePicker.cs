@@ -1,9 +1,12 @@
 ﻿using Newtonsoft.Json;
 using Sirenix.OdinInspector;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class FreeFlowMovePicker : MonoBehaviour
 {
@@ -51,12 +54,74 @@ public class FreeFlowMovePicker : MonoBehaviour
     {
         INSTANCE = this;
         animationClipHandler = AnimationClipHandler.INSTANCE;
-        JsonSerializerSettings settings = new JsonSerializerSettings();
-        settings.DefaultValueHandling = DefaultValueHandling.Populate;
+
+#if UNITY_EDITOR
+        InitCombatMoves();
+#elif UNITY_WEBGL
+        InitCombatMovesWebGL();
+#else
+        InitCombatMoves();
+#endif
+
+        moveList.Sort(new SortDistance());
+    }
+
+    #region === WebGL Init ===
+    [Button(ButtonSizes.Large), GUIColor(0, 1, 0)]
+    public void PrintAllJsonFilesForWebGL()
+    {
+        Debug.Log(String.Join(",", Directory.GetFiles(basePath, "*.json", SearchOption.AllDirectories)));
+    }
+    private void InitCombatMovesWebGL()
+    {
+        string[] fileNames = GetJsonFiles();
+        foreach (string fname in fileNames)
+        {
+            StartCoroutine(LoadCombatMoveWebGL(fname));
+        }
+    }
+    private string[] GetJsonFiles()
+    {
+        string[] named = new string[] {
+        "Assets\\Resources\\CombatMoves\\_base_counters.json",
+        "Assets\\Resources\\CombatMoves\\_base_kicks.json",
+        "Assets\\Resources\\CombatMoves\\_base_punches.json",
+    };
+        return named;
+    }
+
+    private IEnumerator LoadCombatMoveWebGL(string filePath)
+    {
+        UnityWebRequest www = UnityWebRequest.Get(filePath);
+        yield return www.SendWebRequest();
+
+        if (www.isNetworkError || www.isHttpError)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            AddCombatMove(www.downloadHandler.text);
+        }
+    }
+    #endregion
+
+    #region === Init ===
+    private void InitCombatMoves()
+    {
         string[] fileNames = Directory.GetFiles(basePath, "*.json", SearchOption.AllDirectories);
         foreach (string fname in fileNames)
         {
             string json = File.ReadAllText(fname);
+            AddCombatMove(json);
+        }
+    }
+    private void AddCombatMove(string json)
+    {
+        try
+        {
+            JsonSerializerSettings settings = new JsonSerializerSettings();
+            settings.DefaultValueHandling = DefaultValueHandling.Populate;
             List<FreeFlowAttackMove> moves = JsonConvert.DeserializeObject<List<FreeFlowAttackMove>>(json, settings);
             foreach (FreeFlowAttackMove move in moves)
             {
@@ -68,9 +133,12 @@ public class FreeFlowMovePicker : MonoBehaviour
                 moveList.Add(move);
             }
         }
-
-        moveList.Sort(new SortDistance());
+        catch (System.Exception e)
+        {
+            Debug.LogError("ERROR IN JSON FOR " + json);
+        }
     }
+    #endregion
 
     private class SortDistance : IComparer<FreeFlowAttackMove>
     {
@@ -96,7 +164,7 @@ public class FreeFlowMovePicker : MonoBehaviour
         }
     }
 
-    public FreeFlowAttackMove PickMoveRandomly(Transform player, GameObject target)
+    public FreeFlowAttackMove PickMoveRandomly(Transform player, GameObject target, bool counter)
     {
         if (target == null)
         {
@@ -107,6 +175,8 @@ public class FreeFlowMovePicker : MonoBehaviour
             return debugMove;
         }
 
+        FreeFlowTargetable ffTargetable = target.GetComponent<FreeFlowTargetable>();
+
         Vector3 planarTargetPos = Vector3.ProjectOnPlane(target.transform.position, Vector3.up);
         float targetDistance = Vector3.Distance(player.position, planarTargetPos);
 
@@ -114,12 +184,9 @@ public class FreeFlowMovePicker : MonoBehaviour
         for (int i = 0; i < moveList.Count; i++)
         {
             FreeFlowAttackMove move = moveList[i];
-            float minDistance = move.idealDistance - 0.5f;
-            if (minDistance > targetDistance)
+            if (move.isCounter != counter)
             {
-                // we are too close to do the attack at minimum we need this little space
-                // so we exit
-                break;
+                continue; // pick counters
             }
             possibilities.Add(move);
         }
@@ -128,7 +195,7 @@ public class FreeFlowMovePicker : MonoBehaviour
             Debug.Log("Too close to attack: " + targetDistance);
             return null;
         }
-        int randIdx = Random.Range(0, possibilities.Count);
+        int randIdx = UnityEngine.Random.Range(0, possibilities.Count);
 
         return possibilities[randIdx];
     }

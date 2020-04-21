@@ -57,6 +57,8 @@ public class HMove
     public string location;
 
     public AnimationItem[] scenes;
+    public ClothingState[] clothingStates;
+    public Prop[] props;
 
     [System.Serializable]
     public class Victim
@@ -129,19 +131,9 @@ public class HMove
         [DefaultValue(true)]
         public bool replay = true;
 
-        /// <summary>
-        /// Rate to which to play the moans, if zero then no moans are played
-        /// </summary>
-        public int bpm;
-        /// <summary>
-        /// These moods correspond to the moan types that are played while sexing
-        /// reluctant
-        /// enjoying
-        /// fucked_silly
-        /// </summary>
-        public string victimMoodOverride;
         public string victimAnimationId;
         public string[] attackerAnimationIds;
+        public MoanTrack[] moans;
 
         [DefaultValue(1)]
         public int loopCount = 1;
@@ -149,11 +141,9 @@ public class HMove
         [DefaultValue(1.0f)]
         public float animationSpeed = 1.0f;
 
-        public Sound[] sounds;
-
         public AnimationItem(AnimationItem copy)
         {
-            if (copy == null || copy.attackerAnimationIds == null || copy.attackerAnimationIds.Length == 0)
+            if (copy == null)
             {
                 return;
             }
@@ -163,59 +153,84 @@ public class HMove
             this.maxHeatLimit = copy.maxHeatLimit;
             this.heatRate = copy.heatRate;
             this.replay = copy.replay;
-            this.bpm = copy.bpm;
-            this.victimMoodOverride = copy.victimMoodOverride;
+            
+            if (copy.moans != null && copy.moans.Length != 0)
+            {
+                this.moans = new MoanTrack[copy.moans.Length];
+                for(int i = 0; i <copy.moans.Length; i++)
+                {
+                    this.moans[i] = new MoanTrack(copy.moans[i]);
+                }
+            }
             this.victimAnimationId = copy.victimAnimationId;
-            try
+            if ( copy.attackerAnimationIds != null && copy.attackerAnimationIds.Length != 0)
             {
                 this.attackerAnimationIds = new string[copy.attackerAnimationIds.Length];
-            } catch (System.Exception)
-            {
-                Debug.LogError("SCOOBY");
-            }
-            for (int j = 0; j < copy.attackerAnimationIds.Length; j++)
-            {
-                this.attackerAnimationIds[j] = copy.attackerAnimationIds[j];
-            }
-
-
-            this.loopCount = copy.loopCount = 1;
-            this.animationSpeed = copy.animationSpeed = 1.0f;
-
-            if (copy.sounds != null && copy.sounds.Length != 0)
-            {
-                this.sounds = new Sound[copy.sounds.Length];
-
-                for (int j = 0; j < copy.sounds.Length; j++)
+                for (int j = 0; j < copy.attackerAnimationIds.Length; j++)
                 {
-                    Sound sound = new Sound();
-                    sound.soundId = copy.sounds[j].soundId;
-                    sound.time = copy.sounds[j].time;
-                    sound.probability = copy.sounds[j].probability;
-                    this.sounds[j] = sound;
+                    this.attackerAnimationIds[j] = copy.attackerAnimationIds[j];
                 }
             }
 
+            this.loopCount = copy.loopCount = 1;
+            this.animationSpeed = copy.animationSpeed = 1.0f;
+        }
+    }
+    [System.Serializable]
+    public class MoanTrack
+    {
+        public bool female;
+        public int role; // 0 - victim, 1 - attacker#1, 2 - attacker#2
+        public string[] sounds;
+
+        public MoanTrack() { }
+        public MoanTrack(MoanTrack copy)
+        {
+            this.female = copy.female;
+            if (copy.sounds!=null && copy.sounds.Length != 0)
+            {
+                this.sounds = new string[copy.sounds.Length];
+                for (int i = 0; i< copy.sounds.Length; i++)
+                {
+                    this.sounds[i] = copy.sounds[i];
+                }
+            }
         }
     }
 
     [System.Serializable]
-    public class Sound
+    public class ClothingState
     {
-        public string soundId;
-        /// <summary>
-        /// When to play the sound in the animation
-        /// 0 = start
-        /// 0.5 = half way through the animation clip
-        /// 1 = end of the animation
-        /// </summary>
-        public float time = 0.0f;
+        public int actor;
+        public string clothType;
+        public string clothState;
 
-        /// <summary>
-        /// Probability of playing from 0 to 1.0
-        /// </summary>
-        [DefaultValue(1.0f)]
-        public float probability = 1.0f;
+        // for json
+        public ClothingState() { }
+        public ClothingState(ClothingState copy)
+        {
+            actor = copy.actor;
+            clothType = copy.clothType;
+            clothState = copy.clothState;
+        }
+    }
+
+    [System.Serializable]
+    public class Prop
+    {
+        public int actor;
+        public string bone;
+        public string name;
+
+        // for json
+        public Prop() { }
+
+        public Prop(Prop copy)
+        {
+            actor = copy.actor;
+            bone = copy.bone;
+            name = copy.name;
+        }
     }
 
     public HMove(HMove copy)
@@ -239,21 +254,27 @@ public class HMove
 
         this.victim = new Victim();
 
+        if (copy.victim == null)
+        {
+            return;
+        }
         this.victim.reqParts = new string[copy.victim.reqParts.Length];
         for (int i = 0; i < copy.victim.reqParts.Length; i++)
         {
             this.victim.reqParts[i] = copy.victim.reqParts[i];
         }
         this.victim.gameObject = copy.victim.gameObject;
-
-        this.attackers = new Attacker[copy.attackers.Length];
-        for (int i = 0; i < copy.attackers.Length; i++)
+        if (copy.attackers != null)
         {
-            Attacker attacker = new Attacker();
-            attacker.targetPart = copy.attackers[i].targetPart;
-            attacker.usingPart = copy.attackers[i].usingPart;
-            attacker.gameObject = copy.attackers[i].gameObject;
-            this.attackers[i] = attacker;
+            this.attackers = new Attacker[copy.attackers.Length];
+            for (int i = 0; i < copy.attackers.Length; i++)
+            {
+                Attacker attacker = new Attacker();
+                attacker.targetPart = copy.attackers[i].targetPart;
+                attacker.usingPart = copy.attackers[i].usingPart;
+                attacker.gameObject = copy.attackers[i].gameObject;
+                this.attackers[i] = attacker;
+            }
         }
 
         this.category = copy.category;
@@ -262,6 +283,24 @@ public class HMove
         for (int i = 0; i < copy.scenes.Length; i++)
         {
             this.scenes[i] = new AnimationItem(copy.scenes[i]);
+        }
+
+        if (copy.clothingStates != null && copy.clothingStates.Length != 0)
+        {
+            clothingStates = new ClothingState[copy.clothingStates.Length];
+            for (int i = 0; i < copy.clothingStates.Length; i++)
+            {
+                clothingStates[i] = new ClothingState(copy.clothingStates[i]);
+            }
+        }
+
+        if (copy.props != null && copy.props.Length != 0)
+        {
+            props = new Prop[copy.props.Length];
+            for (int i = 0; i < copy.props.Length; i++)
+            {
+                props[i] = new Prop(copy.props[i]);
+            }
         }
     }
 

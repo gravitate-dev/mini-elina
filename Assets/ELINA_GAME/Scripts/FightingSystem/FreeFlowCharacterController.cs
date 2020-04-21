@@ -1,8 +1,10 @@
-﻿using Invector.vCharacterController;
-using Invector.vCharacterController.AI;
+﻿using Animancer;
+using Invector.vCharacterController;
+using Pathfinding;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 using static PlayerSpellLibrary;
 
 /// <summary>
@@ -10,19 +12,23 @@ using static PlayerSpellLibrary;
 /// </summary>
 public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 {
-
+    private bool ActionsEnabled;
+    private GameObject currentTarget;
     private PlayerSpellLibrary playerSpellLibrary;
-    private FreeFlowGapCloser freeFlowGapCloser;
     private FreeFlowMovePicker freeFlowMovePicker;
     private FreeFlowTargetChooser freeFlowEnemyPicker;
     private FreeFlowAnimatorController freeFlowAnimatorController;
     private HentaiSexCoordinator hentaiSexCoordinator;
     private vThirdPersonInput invectorControllerInput;
-    private Animator animator;
+    private HybridAnimancerComponent animancer;
     private int GO_ID;
     private Queue<FreeFlowAttackMove> actionQueue = new Queue<FreeFlowAttackMove>();
     private List<System.Guid> disposables = new List<System.Guid>();
     private HashSet<string> lockInputReasons = new HashSet<string>();
+	public bool debugMode;
+
+    private float MAX_ASTAR_TRAVEL_TIME = 4000f;
+    private float astarTravelTime;
 
     private int nextAction = 0;
     private int ACTION_NULL = 0;
@@ -30,8 +36,6 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     private int ACTION_COUNTER = 2;
     private int ACTION_EVADE = 3;
     private int ACTION_MAGIC_SPELL = 4;
-    private float DisableActionsTime;
-    private float DisableActionsVictimHitAnimationTime;
     private float ACTION_TIMEOUT_TIME = 1f; // game will listen for 0.3 seconds to do the next action otherwise it will ignore
     private List<Spell> spells;
     private Spell chosenSpell;
@@ -51,7 +55,6 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     public bool canBeSexed; // meaning that cna the player be forced to switch to a new move.
     [HideInInspector]
     public bool canBeCarried;
-    private GlideController glideController;
     #endregion
     private void Awake()
     {
@@ -61,29 +64,20 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         freeFlowAnimatorController = GetComponent<FreeFlowAnimatorController>();
         invectorControllerInput = GetComponent<vThirdPersonInput>();
         freeFlowMovePicker = FindObjectOfType<FreeFlowMovePicker>();
-        animator = GetComponent<Animator>();
-        glideController = GetComponent<GlideController>();
-        freeFlowGapCloser = GetComponent<FreeFlowGapCloser>();
+        animancer = GetComponent<HybridAnimancerComponent>();
         freeFlowEnemyPicker = GetComponent<FreeFlowTargetChooser>();
+        ai = GetComponent<IAstarAI>();
 
+        ActionsEnabled = true;
         canBeAttacked = true;
         canBeSexed = true;
         canBeCarried = false;
 
-        // handle character controller state changes i have a pending invoke that i need to cancel
-        disposables.Add(WickedObserver.AddListener("onStateKnockedOut:" + GO_ID, (obj) =>
+        disposables.Add(WickedObserver.AddListener(HentaiSexCoordinator.EVENT_START_H_MOVE_LOCAL + GO_ID, (unused) =>
         {
-            WickedObserver.SendMessage("EnableInventoryWindow");
-            CancelInvoke();
-        }));
-        disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj) =>
-        {
-            WickedObserver.SendMessage("EnableInventoryWindow");
-            HMove currentMove = new HMove((HMove)obj); // update loop for hentai moves
             canBeSexed = false;
             canBeAttacked = false;
             invectorControllerInput.jumpInput.useInput = false;
-            glideController.enabled = false;
             CancelInvoke();
         }));
 
@@ -92,16 +86,11 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             canBeSexed = true;
             canBeAttacked = true;
             Invoke("AllowJump", 0.1f);
-            glideController.enabled = true;
         });
 
-        disposables.Add(WickedObserver.AddListener("OnFreeFlowAnimationFinish:" + GO_ID, (unused) =>
-        {
-            DisableActionsVictimHitAnimation(0);
-        }));
 
         //todo set freeflow mode when appropriateGetClipByName
-        animator.SetBool("FreeFlowMode", true);
+        animancer.SetBool("FreeFlowMode", true);
     }
 
     private void Start()
@@ -116,24 +105,29 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     void Update()
     {
-
         CapturePlayersInput();
-        
+
+        MonitorVictimForNull();
+
+        UpdatePath();
+
+       
+
         if (ACTION_TIMEOUT_TIME < Time.time)
         {
             nextAction = ACTION_NULL;
         }
-        if (DisableActionsTime > 0 || DisableActionsVictimHitAnimationTime > 0)
-        {
-            DisableActionsVictimHitAnimationTime -= Time.deltaTime;
-            DisableActionsTime -= Time.deltaTime;
-            return;
-        }
+        
         if (nextAction == ACTION_NULL || actionQueue.Count > 0)
         {
             // if i am busy or doing nothing return
             return;
         }
+
+        // while attacking do not allow sending other attacks
+        if (!ActionsEnabled)
+            return;
+
         if (nextAction == ACTION_ATTACK)
         {
             Attack();
@@ -148,6 +142,27 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             Evade();
         }
         nextAction = 0;
+    }
+
+    private void MonitorVictimForNull()
+    {
+        if (actionQueue.Count==0)
+        {
+            return;
+        }
+
+        FreeFlowAttackMove attackMove = actionQueue.Peek();
+        // bug fix
+        // 1. start an attack for an enemy far away
+        // 2. Destroy(enemyGameobject);
+        // 3. Your player gets stuck unless you use this fix here.
+        if (attackMove.victim == null)
+        {
+            Debug.Log("TROLLNABLE: Nullvictim");
+            EnableActions();
+            actionQueue.Clear();
+            UnlockPlayerInput("FreeFlowCharacterController");
+        }
     }
     #region == Capture Input ==
     private void CapturePlayersInput()
@@ -200,20 +215,20 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
             return;
         }
 
-        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(transform,target);
+        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(transform,target, false);
         if (attackMove == null)
         {
             return;
         }
+        ActionsEnabled = false;
+        currentTarget = target;
         WickedObserver.SendMessage("PlayerAttacked"); /// used by <see cref="MusicController"/>
         LockPlayerInput("FreeFlowCharacterController");
         attackMove.victimGO_ID = target.gameObject.GetInstanceID();
         attackMove.attacker = gameObject;
         attackMove.victim = target;
-
+        
         actionQueue.Enqueue(attackMove);
-
-        freeFlowGapCloser.MoveToTargetForAttack(attackMove, this);
     }
 
     private void Counter()
@@ -224,33 +239,43 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         {
             return;
         }
-        
-        EnemyActionManager ticketHolder =  target.gameObject.GetComponent<EnemyActionManager>();
-        if (ticketHolder == null)
-        {
-            return;
-        }
-        WickedObserver.SendMessage("PlayerAttacked"); /// used by <see cref="MusicController"/>
-        LockPlayerInput("FreeFlowCharacterController");
-        ticketHolder.CancelAttack();
+        CounterEnemy(target);
 
-        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(transform,target);
+        WickedObserver.SendMessage("PlayerAttacked"); /// used by <see cref="MusicController"/>
+        
+
+        FreeFlowAttackMove attackMove = freeFlowMovePicker.PickMoveRandomly(transform,target, true);
         if (attackMove == null)
         {
             return;
         }
+        attackMove.isCounter = true;
         attackMove.victimGO_ID = target.gameObject.GetInstanceID();
         attackMove.attacker = gameObject;
         attackMove.victim = target;
 
+        ActionsEnabled = false;
         actionQueue.Enqueue(attackMove);
-
-        freeFlowGapCloser.MoveToTargetForAttack(attackMove, this);
+        LockPlayerInput("FreeFlowCharacterController");
+        currentTarget = target;
     }
 
+    private void CounterEnemy(GameObject enemy)
+    {
+        EnemyLogic enemyLogic = enemy.GetComponent<EnemyLogic>();
+        if (enemyLogic.ChargingAttack)
+        {
+            enemyLogic.ReactToHit(Vector3.zero, true);
+
+            //OR you could do this
+            //enemy.GetComponent<HealthSystem>().TakeDamage(0, -enemy.transform.forward, 1f, -enemy.transform.forward);
+
+            enemyLogic.DisableForDuration(1);
+        }
+    }
     private void MagicSpell(Spell spell)
     {
-        if (spell.SPELL_NUMBER == SPELL_SUMMON_SEX_SUCCUBUS)
+        if (spell.name == "Summon Succubus")
         {
             DoSexSuccubusSpell(spell);
         }
@@ -279,13 +304,6 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         //todo jump
     }
 
-    private void regainPlayerControl()
-    {
-        // TODO check if the inventory is open!
-        WickedObserver.SendMessage("EnableInventoryWindow");
-        UnlockPlayerInput("FreeFlowCharacterController");
-    }
-
     private float calculateDelayTillNextAttack(FreeFlowAttackMove currentAttack)
     {
         return (currentAttack.victimAnimationDelay + currentAttack.attackerLockTimeAfterHit) / currentAttack.attackerAnimationSpeed;
@@ -302,7 +320,7 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
         FreeFlowAnimatorController victimFreeFlowAnimatorController = action.victim.GetComponent<FreeFlowAnimatorController>();
         FreeFlowTargetable victimTargetable = action.victim.GetComponent<FreeFlowTargetable>();
-        int result = victimTargetable.hit();
+        int result = victimTargetable.hit(action);
         action.victimReactionId = result;
 
         // victim
@@ -313,16 +331,25 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         freeFlowAnimatorController.startFreeFlowAttack(action);
 
         float actionTotalTime = calculateDelayTillNextAttack(action);
-        WickedObserver.SendMessage("DisableInventoryWindow");
         // we disable the character controller during this time!
-        CancelInvoke();
-        Invoke("regainPlayerControl", actionTotalTime);
-        DisableActions(actionTotalTime);
+        StartCoroutine(RegainPlayerControl(actionTotalTime));
+        
+        MovingToTargetPosition = false;
+        currentTarget = null;
+        ai.canMove = false;
+    }
+
+    private IEnumerator RegainPlayerControl(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        EnableActions();
+        UnlockPlayerInput("FreeFlowCharacterController");
     }
 
     public void onReachedDestinationFail()
     {
         UnlockPlayerInput("FreeFlowCharacterController");
+        EnableActions();
         FreeFlowAttackMove move = actionQueue.Dequeue();
         if (move == null)
         {
@@ -332,53 +359,31 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
         {
             return;
         }
+        currentTarget = null;
+        ai.canMove = false;
+        MovingToTargetPosition = false;
+
         move.victim.gameObject.GetComponent<EnemyLogic>().DisableForDuration(0);
     }
 
 
 
     #region == Victim Routines and Health Management ==
-    public void VictimHitRoutines(FreeFlowAttackMove freeFlowAttackMove)
+    private void EnableActions()
     {
-        FreeFlowAttackMove attack = new FreeFlowAttackMove(freeFlowAttackMove);
-        if (attack.victim.gameObject.GetInstanceID() == GO_ID)
-        {
-            // i am victim
-            StartCoroutine(onHitRoutines(attack));
-        }
-    }
-    private IEnumerator onHitRoutines(FreeFlowAttackMove move)
-    {
-        //Wait for attack anim to play
-        // disable their attack
-        float delay = move.victimAnimationDelay / move.attackerAnimationSpeed;
-        DisableActionsVictimHitAnimation(10f);
-        yield return new WaitForSeconds(delay);
-        // todo do special on hits here this is after the character gets punched
-    }
-
-    private void DisableActionsVictimHitAnimation(float time)
-    {
-        DisableActionsVictimHitAnimationTime = time;
-    }
-    private void DisableActions(float time)
-    {
-        DisableActionsTime = time;
-        nextAction = ACTION_NULL;
+        ActionsEnabled = true;
     }
 
     private void AllowJump()
     {
         invectorControllerInput.jumpInput.useInput = true;
     }
-    public int TakePhysicalHit()
-    {
-        currentHits++;
-        return HIT_RESULT_NORMAL;
-    }
-
     #endregion
 
+    public bool IsPlayerInputLocked()
+    {
+        return lockInputReasons.Count != 0;
+    }
     public void LockPlayerInput(string reason)
     {
         lockInputReasons.Add(reason);
@@ -387,8 +392,9 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
 
     public void UnlockPlayerInput(string reason)
     {
+        bool wasLocked = lockInputReasons.Count != 0;
         lockInputReasons.Remove(reason);
-        if (lockInputReasons.Count == 0)
+        if (wasLocked && lockInputReasons.Count == 0)
         {
             invectorControllerInput.SetLockAllInput(false);
         }
@@ -397,12 +403,129 @@ public class FreeFlowCharacterController : MonoBehaviour, FreeFlowGapListener
     #region === What Attacks can Take ===
     public bool isTargetSexable()
     {
+    	// might be a bug here if i dont return the comment out line
+    	// return !hentaiSexCoordinator.IsSexing()
         return true;
     }
 
     public bool isTargetAttackable()
     {
         return hentaiSexCoordinator.IsSexing() == false;
+    }
+    #endregion
+
+    #region === Free Flow Auto Movement ===
+    IAstarAI ai;
+    [HideInInspector] public Vector3 MovementDirection;
+    [HideInInspector] public bool MovingToTargetPosition = false;
+    [HideInInspector] public bool MovingToSpecifiedLocation = false;
+
+    private Queue<float> rollingVelocity = new Queue<float>();
+    /// <summary>
+    /// DETECTS ASTAR character stuck
+    /// Takes a rolling average and will determine if AStar is stuck or not
+    /// </summary>
+    /// <param name="currentMagnitude">ai.velocity.magnitude</param>
+    /// <returns>true if character is stuck</returns>
+    private bool circuitBreak(float currentMagnitude)
+    {
+        float SAMPLE_SIZE_REQUIRED = 10;
+        float REQUIRED_MAGNITUDE = 0.4f;
+
+        rollingVelocity.Enqueue(currentMagnitude);
+        if (rollingVelocity.Count == SAMPLE_SIZE_REQUIRED)
+        {
+            float rollingAverage = rollingVelocity.Average();
+            Debug.Log("ROLLING: " +rollingAverage);
+            rollingVelocity.Dequeue();
+            if (rollingAverage < REQUIRED_MAGNITUDE)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    /// <summary>
+    /// Updates the path to the current pathfinding target, this runs every frame
+    /// </summary>
+    void UpdatePath()
+    {
+        if (Input.GetKey(KeyCode.H))
+        {
+            GetComponent<Rigidbody>().isKinematic = !GetComponent<Rigidbody>().isKinematic;
+            string logstring = $@"
+
+  currentTarget null? ""{currentTarget==null}"",
+  ai.canMove ""{ai.canMove}"" 
+  ai.pathPending ""{ai.pathPending}""
+  ai.destination ""{ai.destination}""
+";
+            Debug.Log(logstring);
+        }
+        // only ai move if we have a target
+        if (currentTarget == null)
+        {
+            UnlockPlayerInput("FreeFlowCharacterController");
+            astarTravelTime = MAX_ASTAR_TRAVEL_TIME;
+            ai.canMove = false;
+            return;
+        }
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            astarTravelTime = 0;
+        }
+        // stuck detection
+        //circuitBreak(ai.velocity.magnitude);
+        astarTravelTime -= Time.deltaTime;
+        // we have a target
+        ai.canMove = true;
+        ai.destination = currentTarget.transform.position;
+        animancer.SetFloat("InputMagnitude", 1.0f);
+        RotateTowardTarget(currentTarget.transform.position, 10.0f);
+
+        if ((ai.reachedDestination || Vector3.Distance(transform.position, ai.destination) <= 1.5))
+        {
+            // start the attack
+            onReachedDestination();
+
+        } else if (astarTravelTime < 0)
+        {
+            // failed to reach target!
+            onReachedDestinationFail();
+        }
+    }
+
+    /// <summary>
+    /// Sets the movement direction toward the location provided, and returns a boolean representing if the enemy is at the location or not
+    /// </summary>
+    /// <param name="Location"></param>
+    bool MoveToLocation(Vector3 Location)
+    {
+        // Set the movement direction toward the preferred distance
+        Vector3 directionToLocation = Location - transform.position;
+        float distanceToLocation = Vector3.Distance(Location, transform.position);
+        if (distanceToLocation > 0.5f)
+        {
+            // Rotate towards the location
+            directionToLocation.y = 0;
+            Quaternion rot = Quaternion.LookRotation(directionToLocation);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rot, 5 * Time.deltaTime);
+            MovementDirection = directionToLocation;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    void RotateTowardTarget(Vector3 TargetPosition, float speed)
+    {
+        Vector3 dir = TargetPosition - transform.position;
+        dir.y = 0; // keep the direction strictly horizontal
+        Quaternion rot = Quaternion.LookRotation(dir);
+        // slerp to the desired rotation over time
+        transform.rotation = Quaternion.Slerp(transform.rotation, rot, speed * Time.deltaTime);
     }
     #endregion
 }

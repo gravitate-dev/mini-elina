@@ -1932,23 +1932,24 @@ GameObject:
   - component: {fileID: 8339274005445879818}
   - component: {fileID: 8339274005445879819}
   - component: {fileID: 8339274005445879925}
-  - component: {fileID: 8339274004900959050}
   - component: {fileID: 3983926463566862402}
-  - component: {fileID: 8339274005445879924}
-  - component: {fileID: 8339274005445879927}
   - component: {fileID: 8339274005445879945}
   - component: {fileID: 8339274005445879926}
   - component: {fileID: 8339274005445879947}
-  - component: {fileID: 6147416953668619378}
   - component: {fileID: 1184642975343308524}
   - component: {fileID: 8235869303410631351}
   - component: {fileID: 8605123645104206940}
   - component: {fileID: 6777327107831445881}
   - component: {fileID: 7813475149519522139}
   - component: {fileID: 263168884542719876}
-  - component: {fileID: 8615409302994494715}
   - component: {fileID: 2239962051222924781}
   - component: {fileID: 2202254327123882240}
+  - component: {fileID: 8339274004900959050}
+  - component: {fileID: 6684925558784385268}
+  - component: {fileID: 7230218012290223881}
+  - component: {fileID: 8205616013784064066}
+  - component: {fileID: 6451538710878146179}
+  - component: {fileID: 4732020371446609499}
   m_Layer: 9
   m_Name: ENEMY_MELEE
   m_TagString: Enemy
@@ -2010,28 +2011,6 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 1.2, z: 0}
---- !u!114 &8339274004900959050
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8339274005445879922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 87111d2b31ffc7c42ac931eb671ef2cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  stuff: 0
-  hitsForDefeat: 10
-  sexToHitsFactor: 3
-  hitsToStun: 5
-  stunTimeFreeHitsAllowed: 2
-  enemyStunTime: 5
-  currentHits: 0
-  currentHitsToStunCountdown: 0
-  defeated: 0
-  isSexing: 0
 --- !u!114 &3983926463566862402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2042,57 +2021,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0fe06897ca9f62a4fa962bf734f697cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &8339274005445879924
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8339274005445879922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ee6ced72461ce99449be966a0a49aa3a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  TargetDestination: {x: 0, y: 0, z: 0}
-  MovementDirection: {x: 0, y: 0, z: 0}
-  EnemyType: 0
-  CurrentSpeed: 0
-  MaxChasingSpeed: 4
-  MaxRepositioningSpeed: 3
-  MaxStrafingSpeed: 3
-  CurrentBehavior: 0
-  BehaviorChangeTimerForSex: 0
-  BehaviorChangeTimerForStun: 0
-  BehaviorChangeTimer: 0
-  AttackCooldownTimer: 0
-  DistanceFromPlayer: 0
-  Aggro: 0
-  Attacking: 0
-  MovingToTargetPosition: 0
-  TargetingRange: 20
-  MaximumDistanceToPlayer: 8
-  MinimumDistanceToPlayer: 0.5
-  ChanceToIdle: 0.2
-  DurationToIdle: 1
-  ChanceToStrafe: 0.3
-  DurationToStrafe: 1.5
-  StrafeDirectionChangeTime: 2
-  ChanceToReposition: 0.4
-  DurationToReposition: 2
-  TimeBetweenAttacks: 0
---- !u!114 &8339274005445879927
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8339274005445879922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 10c7846794986ba40b4f896a102475c8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &8339274005445879945
@@ -2157,7 +2085,7 @@ MonoBehaviour:
   endReachedDistance: 0.05
   alwaysDrawGizmos: 0
   slowWhenNotFacingTarget: 1
-  whenCloseToDestination: 0
+  whenCloseToDestination: 1
   constrainInsideGraph: 0
 --- !u!114 &8339274005445879947
 MonoBehaviour:
@@ -2174,33 +2102,15 @@ MonoBehaviour:
   _Animator: {fileID: 8339274005445879819}
   _ActionOnDisable: 0
   _PlayAutomatically: 0
-  _Animations: []
+  _Animations:
+  - {fileID: 7400000, guid: 321c84fe5f59b5a45a4a1fa763e20f65, type: 2}
   _Controller:
     _FadeDuration: 0.25
     _Events:
       _NormalizedTimes: []
       _Callbacks: []
-    _Controller: {fileID: 9100000, guid: ce29d50ea588b3e48a8875510eb02bd6, type: 2}
+    _Controller: {fileID: 9100000, guid: dfe7e7c3c105f1b4a80b6dc9d12f6a54, type: 2}
     _KeepStateOnStop: 0
---- !u!114 &6147416953668619378
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8339274005445879922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7dcc9468c4882ca4a966ae3d8c36ada5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  startActionNow: 0
-  meleeChance: 0.466
-  sexChance: 0.524
-  defeated: 0
-  warningTimeMelee: 1
-  warningTimeRange: 5
-  wishAction: 
 --- !u!114 &1184642975343308524
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2257,6 +2167,8 @@ MonoBehaviour:
     category: 
     location: 
     scenes: []
+    clothingStates: []
+    props: []
 --- !u!114 &6777327107831445881
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2285,7 +2197,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   genderId: 3
   deviceId: 
-  nameOfDeviceOn: 
+  currentMove:
+    sceneIndexSync: 0
+    loopCountSync: 0
+    playground: 0
+    dynamicBoneDisable: 0
+    codeControlFaces: 0
+    playClimax: 0
+    disabled: 0
+    moveName: 
+    interruptable: 0
+    sexLocationPosition: {x: 0, y: 0, z: 0}
+    sexLocationRotation: {x: 0, y: 0, z: 0, w: 0}
+    victim:
+      reqParts: []
+      gameObject: {fileID: 0}
+    attackers: []
+    category: 
+    location: 
+    scenes: []
+    clothingStates: []
+    props: []
+  sexProps: []
 --- !u!114 &263168884542719876
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2308,18 +2241,6 @@ MonoBehaviour:
   bezierTangentLength: 0.4
   offset: 0.2
   factor: 0.1
---- !u!114 &8615409302994494715
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8339274005445879922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4de81c0947634184380e9399a79b3e83, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &2239962051222924781
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2352,6 +2273,287 @@ MonoBehaviour:
   sexClothes: []
   hair: {fileID: 2916597873090336211, guid: cb862f8cfdf0e3c4aa658a12d97f21b0, type: 3}
   head: {fileID: 8339274005810784861}
+--- !u!114 &8339274004900959050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8339274005445879922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87111d2b31ffc7c42ac931eb671ef2cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hitboxRadius: 0
+  DistanceToCleanUp: 30
+  stuff: 0
+  hitsForDefeat: 10
+  sexToHitsFactor: 3
+  hitsToStun: 5
+  stunTimeFreeHitsAllowed: 2
+  enemyStunTime: 5
+  currentHits: 0
+  currentHitsToStunCountdown: 0
+  defeated: 0
+  isSexing: 0
+  isStateStunned: 0
+  DrawHitBoxRadius: 0
+--- !u!114 &6684925558784385268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8339274005445879922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 390fbc97f2f5e7b4fbc0633d2cc9729b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  HitsInteruptStun: 0
+  Stunned: 0
+  TargetPlayer: {fileID: 0}
+  MovementDirection: {x: 0, y: 0, z: 0}
+  BlendedMovementDirection: {x: 0, y: 0, z: 0}
+  OnStartChargeUp:
+    m_PersistentCalls:
+      m_Calls: []
+  OnStopChargeUp:
+    m_PersistentCalls:
+      m_Calls: []
+  EnemyType: 0
+  HasStrafingAnimations: 0
+  MaxChasingSpeed: 7
+  MaxRepositioningSpeed: 7
+  MaxStrafingSpeed: 7
+  MaxMovingToAttackSpeed: 9
+  PercentSpeedWhileBeingAttacked: 100
+  MaxDistanceForSpeedChange: 3
+  CurrentSpeed: 0
+  CurrentBehavior: 0
+  ChargingAttack: 0
+  ChargingAttackDuration: 0
+  MovingToTargetPosition: 0
+  MovingToSpecifiedLocation: 0
+  Attacking: 0
+  StoredAttackDuration: 0
+  AttackDuration: 0
+  AttackCooldownTimer: 0
+  DistanceFromPlayer: 0
+  Aggro: 0
+  InAttackRange: 0
+  TargetingRange: 15
+  AlertNearbyEnemiesRange: 6
+  MaximumDistanceToPlayer: 10
+  MinimumDistanceToPlayer: 0.2
+  TimeUntilAggroDrop: 1
+  DelayToChase: 0
+  IdleTimeBetweenBehaviors: 0
+  ChanceToIdle: 0.1
+  DurationToIdle: 0.5
+  ChanceToStrafe: 0.3
+  DurationToStrafe: 1.5
+  StrafeDirectionChangeTime: 2
+  RepositionsWhileStrafing: 1
+  ChanceToReposition: 0.2
+  DurationToReposition: 2
+  RangeToBeginAvoiding: 2
+  BufferTimeTilAvoiding: 1
+  CanPerformCustomBehaviors: 0
+  CustomBehaviors: []
+  MinimumTimeBetweenAttacks: 0
+  RangedAttackDistance: 0
+  Attacks:
+  - CanBeInterupted: 0
+    disabled: 0
+    AnimationName: SimpleJab
+    Damage: 0
+    MinGuardBreak: 5
+    MaxGuardBreak: 10
+    RotationSpeed: 0
+    AttackSpeed: 1.3
+    MinimumDistance: 1
+    Cooldown: 2
+    ChargeUpTime: 1
+    ChargingAnimationName: 
+    IsRangedAttack: 0
+    ProjectilePrefab: {fileID: 6415686713469207326, guid: 53e5f0f49f6c7844d9c687ff031f06ed,
+      type: 3}
+    ProjectileSpawnTime: 0.185
+    ProjectileSpawnPoint: {fileID: 8339274004271157830}
+    CurrentCooldown: 0
+    ProjectileSpawned: 0
+  SelectedAttack:
+    CanBeInterupted: 1
+    disabled: 0
+    AnimationName: 
+    Damage: 0
+    MinGuardBreak: 0
+    MaxGuardBreak: 0
+    RotationSpeed: 0
+    AttackSpeed: 0
+    MinimumDistance: 0
+    Cooldown: 0
+    ChargeUpTime: 0
+    ChargingAnimationName: 
+    IsRangedAttack: 0
+    ProjectilePrefab: {fileID: 0}
+    ProjectileSpawnTime: 0
+    ProjectileSpawnPoint: {fileID: 0}
+    CurrentCooldown: 0
+    ProjectileSpawned: 0
+  DrawRangeDistances: 1
+  DrawAttackDistances: 0
+--- !u!114 &7230218012290223881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8339274005445879922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93d94d4db33b1dd4587ec3a5d0843a44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &8205616013784064066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8339274005445879922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b80630108d13b42428d5ac6ce58c9e91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lustLevel: 0
+  lustMax: 100
+  decreaseLustRate: 10
+  isMasterbating: 0
+--- !u!82 &6451538710878146179
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8339274005445879922}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &4732020371446609499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8339274005445879922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30efc7991cbb43d48b0dcb41de59e677, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  IsEnemy: 1
+  MaxHealth: 100
+  CurrentHealth: 100
+  PainSounds: []
+  ArmorImpactSounds: []
+  FleshImpactSounds: []
+  FleshDestructionSounds: []
+  ArmorDestructionSounds: []
+  audio: {fileID: 0}
+  LimbDestruction: {fileID: 0}
+  LeakingBlood: []
+  CircularBlood: []
+  BurstBlood: []
 --- !u!1 &8339274005449177994
 GameObject:
   m_ObjectHideFlags: 0

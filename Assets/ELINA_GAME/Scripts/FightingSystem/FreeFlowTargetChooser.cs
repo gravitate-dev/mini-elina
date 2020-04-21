@@ -1,10 +1,9 @@
-﻿using Invector.vCharacterController;
-using System.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class FreeFlowTargetChooser : MonoBehaviour
 {
+    public LayerMask ObstacleLayer;
 
     private const float MAX_TARGET_DISTANCE = 11.0f;// prod value 11.0f;
 
@@ -52,6 +51,30 @@ public class FreeFlowTargetChooser : MonoBehaviour
         return closestTarget;
     }
 
+
+    private Transform GetFarthestTargetDistance(List<Transform> availableTargets, Vector3 playerPos)
+    {
+        float farthestDistance = 0;
+        Transform farthestTarget = null;
+        for (int i = 0; i < availableTargets.Count; i++)
+        {
+            Vector3 planarTargetPos = Vector3.ProjectOnPlane(availableTargets[i].position, Vector3.up);
+            float dist = Vector3.Distance(playerPos, planarTargetPos);
+
+            if (dist > farthestDistance)
+            {
+                farthestDistance = dist;
+                farthestTarget = availableTargets[i];
+            }
+        }
+
+        if (farthestTarget != null)
+        {
+            Debug.DrawRay(farthestTarget.position, Vector3.up * 5f, Color.green, 1f);
+        }
+        return farthestTarget;
+    }
+
     private Transform GetClosestTargetDistance(List<Transform> availableTargets, Vector3 playerPos)
     {
         float closestDistance = Mathf.Infinity;
@@ -81,21 +104,31 @@ public class FreeFlowTargetChooser : MonoBehaviour
         List<Transform> targets = new List<Transform>();
         foreach (Collider collider in Physics.OverlapSphere(transform.position, MAX_TARGET_DISTANCE))
         {
-            EnemyActionManager enemyMeleeActionManager = collider.gameObject.GetComponent<EnemyActionManager>();
+            if (collider.transform.root == transform.root)
+            {
+                continue;
+            }
+
+            if (!CanSeeTarget(collider.transform))
+            {
+                continue;
+            }
             FreeFlowTargetable freeFlowTargetable = collider.gameObject.GetComponent<FreeFlowTargetable>();
-            if (enemyMeleeActionManager == null || collider.gameObject == this.gameObject)
+            if (freeFlowTargetable == null)
             {
                 continue;
             }
 
-
-
-            if (reason == TARGET_REASON_ATTACK && !freeFlowTargetable.isTargetableForAttack()
-                || reason == TARGET_REASON_COUNTER && !enemyMeleeActionManager.isWishingMeleeAttack()
-                || reason == TARGET_REASON_SEX && !freeFlowTargetable.isTargetSexable())
+            if (freeFlowTargetable != null)
             {
-                continue;
+                if (!CanTargetFreeFlow(reason, freeFlowTargetable))
+                {
+                    continue;
+                }
             }
+
+            // todo building logic 
+            
             targets.Add(collider.transform);
         }
 
@@ -119,6 +152,44 @@ public class FreeFlowTargetChooser : MonoBehaviour
         }
         return null;
 
+    }
+
+    private bool CanSeeTarget(Transform target)
+    {
+        RaycastHit hit;
+        var playerPos = transform.position;
+        playerPos.y += 0.2f;
+        var targetPos = target.position;
+        targetPos.y += 0.2f;
+        if (Physics.Linecast(playerPos, targetPos, out hit, ObstacleLayer, QueryTriggerInteraction.Ignore))
+        {
+            //Debug.Log("BLOCKED VISION");
+            return false;
+        }
+        return true;
+    }
+
+    private bool CanTargetFreeFlow(int reason, FreeFlowTargetable target)
+    {
+        EnemyLogic enemyLogic = target.gameObject.GetComponent<EnemyLogic>();
+        if (enemyLogic == null)
+        {
+            // can only counter enemyLogic units
+            return false;
+        }
+
+        if (reason == TARGET_REASON_ATTACK && !target.isTargetableForAttack())
+        {
+            return false;
+        }
+        else if (reason == TARGET_REASON_COUNTER && !enemyLogic.ChargingAttack)
+        {
+            return false;
+        } else if (reason == TARGET_REASON_SEX && !target.isTargetSexable())
+        {
+            return false;
+        }
+        return true;
     }
 
     private void OnDrawGizmos()

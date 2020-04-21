@@ -13,7 +13,7 @@ public class FreeFlowMovePicker : MonoBehaviour
     private List<FreeFlowAttackMove> moveList = new List<FreeFlowAttackMove>();
     private AnimationClipHandler animationClipHandler;
 
-
+    public static FreeFlowMovePicker INSTANCE;
     public bool useDebugMove;
     public FreeFlowAttackMove debugMove;
 
@@ -49,6 +49,7 @@ public class FreeFlowMovePicker : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
+        INSTANCE = this;
         animationClipHandler = AnimationClipHandler.INSTANCE;
         JsonSerializerSettings settings = new JsonSerializerSettings();
         settings.DefaultValueHandling = DefaultValueHandling.Populate;
@@ -110,23 +111,7 @@ public class FreeFlowMovePicker : MonoBehaviour
         float targetDistance = Vector3.Distance(player.position, planarTargetPos);
 
         List<FreeFlowAttackMove> possibilities = new List<FreeFlowAttackMove>();
-        for (int i = 0; i < moveList.Count; i++)
-        {
-            FreeFlowAttackMove move = moveList[i];
-            float minDistance = move.idealDistance - 0.5f;
-            if (minDistance > targetDistance)
-            {
-                // we are too close to do the attack at minimum we need this little space
-                // so we exit
-                break;
-            }
-            possibilities.Add(move);
-        }
-        if (possibilities.Count == 0)
-        {
-            Debug.Log("Too close to attack: " + targetDistance);
-            return null;
-        }
+        possibilities.AddRange(moveList);
         int randIdx = Random.Range(0, possibilities.Count);
 
         return possibilities[randIdx];

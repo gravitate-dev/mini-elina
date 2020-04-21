@@ -18,6 +18,7 @@ public class FreeFlowAttackMove
     // 2 = punch
     // 3 = throw
     public int moveType;
+    public bool isCounter;
 
     // TODO SPIDERMAN set minimum distance
     public float idealDistance;
@@ -71,6 +72,7 @@ public class FreeFlowAttackMove
     public FreeFlowAttackMove() { }
     public FreeFlowAttackMove(FreeFlowAttackMove copy)
     {
+        this.isCounter = copy.isCounter;
         this.knockback = copy.knockback;
         this.victimReactionId = copy.victimReactionId;
         this.noCrossfade = copy.noCrossfade;

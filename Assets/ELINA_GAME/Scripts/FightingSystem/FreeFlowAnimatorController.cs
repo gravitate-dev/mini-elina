@@ -13,7 +13,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
     private Transform head;
     private int GO_ID;
     private FreeFlowTargetable freeFlowTargetable;
-
+    private FreeFlowCharacterController freeFlowCharacterController;
     private GameObject stunEffectInstance;
 
     private List<System.Guid> disposables = new List<System.Guid>();
@@ -28,6 +28,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
         }
         head = animancer.Animator.GetBoneTransform(HumanBodyBones.Head);
         freeFlowTargetable = GetComponent<FreeFlowTargetable>();
+        freeFlowCharacterController = GetComponent<FreeFlowCharacterController>();
         disposables.Add(WickedObserver.AddListener("onStartHentaiMove:" + GO_ID, (obj) =>
         {
             RemoveDizzyStun();
@@ -36,6 +37,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
         {
             RemoveDizzyStun();
         }));
+		disposables.Add(WickedObserver.AddListener("OnDeath:" + GO_ID, OnDeath));
     }
 
     public void startFreeFlowAttack(FreeFlowAttackMove freeFlowAttackMove)
@@ -99,7 +101,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
             }*/
             AnimationClip clip = AnimationClipHandler.INSTANCE.ClipByName(animationToPlay);
             AnimancerState state = animancer.Play(clip, 0.1f, FadeMode.FixedDuration);
-            state.Time = 0;
+            //state.Time = 0;
             state.Events.OnEnd = ReturnToNormal;
         }
         else
@@ -112,7 +114,7 @@ public class FreeFlowAnimatorController : MonoBehaviour
             string animationToPlay = move.DEBUG_ATTACK != null ? move.DEBUG_ATTACK.name : move.attackerAnimation;
             AnimationClip clip = AnimationClipHandler.INSTANCE.ClipByName(animationToPlay);
             AnimancerState state = animancer.Play(clip, 0.1f, FadeMode.FixedDuration);
-            state.Time = 0;
+            //state.Time = 0;
             state.Speed = move.attackerAnimationSpeed;
             state.Events.OnEnd = ReturnToNormal;
             
@@ -138,7 +140,9 @@ public class FreeFlowAnimatorController : MonoBehaviour
 
     private void ReturnToNormal()
     {
-        WickedObserver.SendMessage("OnFreeFlowAnimationFinish:"+GO_ID);
+        // do NOT enable actions here for freeflowcharactercontroller!
+        if (freeFlowTargetable != null && freeFlowTargetable.defeated)
+            return;
         animancer.PlayController();
     }
 
@@ -182,4 +186,12 @@ public class FreeFlowAnimatorController : MonoBehaviour
             Destroy(effectInstance);
         }
     }
+
+	private void OnDeath(object obj)
+	{
+		WickedObserver.SendMessage("OnFreeFlowAnimationStart:" + GO_ID);
+		AnimationClip clip = AnimationClipHandler.INSTANCE.ClipByName("KB_MidKO_Back");
+		AnimancerState state = animancer.Play(clip, 0.1f, FadeMode.FixedDuration);
+		state.Time = 0;
+	}
 }

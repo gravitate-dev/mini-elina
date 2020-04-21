@@ -11,15 +11,21 @@ public class HMove
     [JsonIgnore]
     public int sceneIndexSync;
     [JsonIgnore]
-    public bool playClimaxSync;
-    [JsonIgnore]
     public int loopCountSync;
 
+    /// <summary>
+    /// true - if player is fucking around with NPCs
+    /// effects ____
+    /// *heat builds from zero when move starts
+    /// *cumming doesnt have any effect of player health
+    /// *hp does not recover while having sex
+    /// after exiting the orgasm bar is set to 0% and lewd bar set to 0%
+    /// </summary>
+    public bool playground;
     public bool dynamicBoneDisable;
-    public bool controlFaces;
-
-    [DefaultValue(5.0f)]
-    public float stunDuration;
+    public bool codeControlFaces;
+    [JsonIgnore]
+    public bool playClimax;
 
     [DefaultValue(false)]
     public bool disabled;
@@ -52,8 +58,6 @@ public class HMove
 
     public AnimationItem[] scenes;
 
-    public AnimationItem orgasmScene;
-
     [System.Serializable]
     public class Victim
     {
@@ -62,8 +66,6 @@ public class HMove
         /// "ass|anus|breast|hand|mouth|penis|pussy|stomach"
         /// </summary>
         public string[] reqParts;
-
-        public int GO_ID;
 
         [JsonIgnore]
         public GameObject gameObject;
@@ -88,8 +90,6 @@ public class HMove
         /// "ass|anus|breast|hand|mouth|penis|pussy|stomach"
         /// </summary>
         public string targetPart;
-
-        public int GO_ID;
 
         [JsonIgnore]
         public GameObject gameObject;
@@ -225,7 +225,10 @@ public class HMove
             return;
         }
         this.sceneIndexSync = copy.sceneIndexSync;
-        this.playClimaxSync = copy.playClimaxSync;
+        this.playground = copy.playground;
+        this.dynamicBoneDisable = copy.dynamicBoneDisable;
+        this.codeControlFaces = copy.codeControlFaces;
+        this.playClimax = copy.playClimax;
         this.loopCountSync = copy.loopCountSync;
         this.disabled = copy.disabled;
         this.interruptable = copy.interruptable;
@@ -241,14 +244,12 @@ public class HMove
         {
             this.victim.reqParts[i] = copy.victim.reqParts[i];
         }
-        this.victim.GO_ID = copy.victim.GO_ID;
         this.victim.gameObject = copy.victim.gameObject;
 
         this.attackers = new Attacker[copy.attackers.Length];
         for (int i = 0; i < copy.attackers.Length; i++)
         {
             Attacker attacker = new Attacker();
-            attacker.GO_ID = copy.attackers[i].GO_ID;
             attacker.targetPart = copy.attackers[i].targetPart;
             attacker.usingPart = copy.attackers[i].usingPart;
             attacker.gameObject = copy.attackers[i].gameObject;
@@ -262,10 +263,32 @@ public class HMove
         {
             this.scenes[i] = new AnimationItem(copy.scenes[i]);
         }
-        this.orgasmScene = new AnimationItem(copy.orgasmScene);
-
-
-
     }
 
+    /// <summary>
+    /// While this target is being sexed, this will check if another enemy can join in
+    /// </summary>
+    /// <param name="attacker"></param>
+    /// <param name="avaibleParts"></param>
+    /// <returns>Returns -1 if they can not participate otherwise it will return  the id of the attacker</returns>
+    public int GetOpenAttackerIndex(GameObject attacker, string[] avaibleParts)
+    {
+        int GO_ID = attacker.GetInstanceID();
+        for (int i = 0; i < attackers.Length; i++)
+        {
+            Attacker possibility = attackers[i];
+            if (possibility.gameObject == null || possibility.gameObject.GetInstanceID() != GO_ID)
+            {
+                // possible match compare parts
+                foreach (string part in avaibleParts)
+                {
+                    if (part.Equals(possibility.usingPart))
+                    {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
 }
